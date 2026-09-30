@@ -4,7 +4,7 @@ Parametric CAD for a family of tactile d6 designs intended for simple FDM printi
 
 ## Status
 
-**First CAD pass.** The models generate valid 24 mm solids and exported STL meshes are checked for watertightness, winding consistency, and overall dimensions. They have not yet been validated in Bambu Studio on the P2S or physically printed.
+**First CAD pass.** The models generate valid 24 mm solids and exported STL meshes are checked for watertightness and winding consistency. Geometry tests also enforce the d6 definition, one-solid output, and nominal 24 mm envelope. The designs have not yet been validated in Bambu Studio on the P2S or physically printed.
 
 The first pass deliberately uses conventional recessed circular pips on every body. This isolates the underlying body geometry before combining it with Paw, Critter, or other tactile-count motifs.
 
@@ -20,8 +20,6 @@ The first pass deliberately uses conventional recessed circular pips on every bo
 - No numerals
 - One solid per die
 
-The generator validates the 1–6 mapping and opposite-face rule before producing geometry.
-
 ## First body designs
 
 - `mochi_soft` — 3.8 mm edge radius; soft rounded baseline
@@ -30,40 +28,42 @@ The generator validates the 1–6 mapping and opposite-face rule before producin
 - `edge_channel` — rounded body with shallow perimeter channels kept away from the pip field
 - `corner_pocket` — rounded body with eight symmetric shallow corner scallops
 
-## Setup
+## Source layout
 
-Python dependencies used for this first pass are pinned in `requirements.txt`.
+Project-specific design code lives in the importable `tactile_dice` package:
 
-Windows PowerShell:
+```text
+src/tactile_dice/
+  __init__.py
+  parameters.py   # canonical dimensions and d6 mappings
+  geometry.py     # geometric primitives
+  model.py        # model composition and design validation
 
-```powershell
-py -m venv .venv
-.venv\Scripts\python -m pip install -r requirements.txt
-.venv\Scripts\python src\dice_family.py
-.venv\Scripts\python src\repair_validate_stl.py
+tests/
+  test_model.py
 ```
 
-macOS/Linux:
+Repository-wide dependency management, export behavior, mesh validation, and CI live at the repository root rather than being duplicated in this project.
+
+## Generate and validate
+
+From the repository root:
 
 ```sh
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install -r requirements.txt
-python src/dice_family.py
-python src/repair_validate_stl.py
+uv sync
+uv run pytest projects/tactile-dice/tests
+uv run python tools/export_project.py tactile-dice
+uv run python tools/validate_mesh.py build/tactile-dice/stl
 ```
 
-If `make` is available, `make all` performs the generation and STL validation steps.
+Or, with `make` available:
 
-## Generated files
+```sh
+make tactile-dice
+```
 
-Generation creates:
-
-- `step/` — interoperable CAD exports
-- `stl/` — slicer-ready mesh exports
-
-These are generated artifacts and are ignored by Git by default. A later print milestone may publish exact STL/3MF files through a tagged GitHub release.
+Generated outputs are placed under `build/tactile-dice/{step,stl}` and ignored by Git. Exact prototype or print-ready binaries can be attached to a tagged GitHub release when useful for handoff.
 
 ## Printer handoff
 
-The intended first prototype workflow is deliberately plain: single material, no required paint, no support-dependent decorative features, and minimal post-processing. The next manufacturing validation step is to load the generated models into Bambu Studio, inspect orientation/layers for the Bambu Lab P2S, and then physically prototype the selected bodies.
+The intended first prototype workflow is deliberately plain: single material, no required paint, no support-dependent decorative features, and minimal post-processing. The next manufacturing validation step is to load the generated models into Bambu Studio, inspect orientation and layers for the Bambu Lab P2S, and physically prototype the selected bodies.
