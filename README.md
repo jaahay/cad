@@ -4,7 +4,7 @@ Source-controlled CAD projects and the code used to generate them.
 
 ## Projects
 
-- [\`projects/tactile-dice\`](projects/tactile-dice/) — tactile, kid-friendly d6 prototypes targeting a Bambu Lab P2S workflow.
+- [`projects/tactile-dice`](projects/tactile-dice/) — tactile, kid-friendly d6 prototypes targeting a Bambu Lab P2S workflow.
 
 ## Repository policy
 
