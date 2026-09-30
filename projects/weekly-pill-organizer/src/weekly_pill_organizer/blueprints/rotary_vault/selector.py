@@ -24,10 +24,14 @@ def build_selector() -> cq.Shape:
         cylinder_z(SELECTOR_BEAD_D / 2.0, SELECTOR_BEAD_H, -STEM_LEN + 0.50)
     )
     selector = selector.fuse(
-        d_prism(DRIVE_LEN + 0.35, STEM_D - 0.25, D_FLAT + 0.10, -STEM_LEN - DRIVE_LEN)
+        d_prism(
+            DRIVE_LEN + 0.35,
+            STEM_D - 0.25,
+            D_FLAT + 0.10,
+            -STEM_LEN - DRIVE_LEN,
+        )
     )
 
-    # Tactile grip flutes around the crown. They are shallow cuts, not separate protrusions.
     for angle in range(0, 360, 15):
         cutter = (
             cq.Workplane("XY")

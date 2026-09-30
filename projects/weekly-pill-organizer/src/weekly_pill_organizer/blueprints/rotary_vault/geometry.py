@@ -1,4 +1,4 @@
-"""Low-level geometry helpers for the Rotary Vault."""
+"""Low-level geometry helpers for the Rotary Vault blueprint."""
 
 from __future__ import annotations
 
@@ -41,10 +41,14 @@ def cylinder_z(radius: float, height: float, z: float = 0.0) -> cq.Shape:
     return shape_of(cq.Workplane("XY").workplane(offset=z).circle(radius).extrude(height))
 
 
-def cylinder_x(length: float, radius: float, center: tuple[float, float, float]) -> cq.Shape:
-    # Build along +Z, center it at the origin, then rotate onto X.
-    shape = shape_of(cq.Workplane("XY").circle(radius).extrude(length)).translate((0, 0, -length / 2.0))
-    shape = shape.rotate((0, 0, 0), (0, 1, 0), 90.0)
+def cylinder_x(
+    length: float, radius: float, center: tuple[float, float, float]
+) -> cq.Shape:
+    shape = (
+        shape_of(cq.Workplane("XY").circle(radius).extrude(length))
+        .translate((0, 0, -length / 2.0))
+        .rotate((0, 0, 0), (0, 1, 0), 90.0)
+    )
     return shape.translate(center)
 
 
@@ -88,7 +92,13 @@ def annular_sector_prism(
         )
         for i in range(ARC_SEGMENTS + 1)
     ]
-    return shape_of(cq.Workplane("XY").workplane(offset=z0).polyline(outer + inner).close().extrude(height))
+    return shape_of(
+        cq.Workplane("XY")
+        .workplane(offset=z0)
+        .polyline(outer + inner)
+        .close()
+        .extrude(height)
+    )
 
 
 def sloped_sector_void(
@@ -101,9 +111,10 @@ def sloped_sector_void(
     top: float,
 ) -> cq.Shape:
     """Sector volume above a planar floor sloping from hub to outside."""
-    sector = annular_sector_prism(r0, r1, center_angle_deg, half_angle_deg, top + 2.0, z0=0.0)
+    sector = annular_sector_prism(
+        r0, r1, center_angle_deg, half_angle_deg, top + 2.0, z0=0.0
+    )
 
-    # In local radial coordinates, create the volume above the desired floor.
     radial_pad = 4.0
     width = 2.0 * (r1 * math.sin(math.radians(half_angle_deg)) + radial_pad)
     profile = [
@@ -113,10 +124,7 @@ def sloped_sector_void(
         (r0 - radial_pad, top + 2.0),
     ]
     wedge = shape_of(
-        cq.Workplane("XZ")
-        .polyline(profile)
-        .close()
-        .extrude(width / 2.0, both=True)
+        cq.Workplane("XZ").polyline(profile).close().extrude(width / 2.0, both=True)
     )
     wedge = wedge.rotate((0, 0, 0), (0, 0, 1), center_angle_deg)
     return sector.intersect(wedge)
@@ -133,5 +141,4 @@ def d_prism(height: float, diameter: float, flat: float, z0: float = 0.0) -> cq.
     box = shape_of(cq.Workplane("XY").box(keep_width, diameter + 2.0, height)).translate(
         (center_x, 0.0, z0 + height / 2.0)
     )
-    # The box removes `flat` millimetres from the +X side of the circular profile.
     return circle.intersect(box)

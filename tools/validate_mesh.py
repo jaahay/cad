@@ -22,11 +22,17 @@ def validate(path: Path) -> tuple[bool, bool, tuple[float, float, float], int]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate generated STL meshes without modifying them.")
-    parser.add_argument("path", type=Path, help="STL file or directory containing STL files")
+    parser = argparse.ArgumentParser(
+        description="Validate generated STL meshes without modifying them."
+    )
+    parser.add_argument(
+        "path",
+        type=Path,
+        help="STL file or directory tree containing generated STL files",
+    )
     args = parser.parse_args()
 
-    paths = [args.path] if args.path.is_file() else sorted(args.path.glob("*.stl"))
+    paths = [args.path] if args.path.is_file() else sorted(args.path.rglob("*.stl"))
     if not paths:
         print(f"No STL files found at {args.path}")
         return 1
@@ -36,7 +42,7 @@ def main() -> int:
         watertight, winding, extents, components = validate(path)
         ok = watertight and winding and components == 1
         print(
-            f"{path.name}: watertight={watertight} winding={winding} "
+            f"{path}: watertight={watertight} winding={winding} "
             f"components={components} extents={extents} ok={ok}"
         )
         failed |= not ok

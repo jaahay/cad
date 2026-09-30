@@ -1,0 +1,4 @@
+slug = "tactile-dice"
+display_name = "Tactile Dice"
+backend = "cadquery"
+module = "tactile_dice.project"

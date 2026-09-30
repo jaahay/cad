@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 
+
 DAY_NAMES = ("CLOSED", "MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")
 POSITION_COUNT = 8
 INDEX_ANGLE = 360.0 / POSITION_COUNT

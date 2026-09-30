@@ -60,11 +60,11 @@ def build_carousel() -> cq.Shape:
         )
         body = body.cut(_outlet_void(index))
 
-    # Keyed selector socket, deliberately stopped above the floor.
     socket_z = CAROUSEL_H - DRIVE_LEN + 0.2
-    body = body.cut(d_prism(DRIVE_LEN + 0.8, STEM_D + 0.55, D_FLAT + 0.15, socket_z))
+    body = body.cut(
+        d_prism(DRIVE_LEN + 0.8, STEM_D + 0.55, D_FLAT + 0.15, socket_z)
+    )
 
-    # Underside detent pockets.
     for index in range(8):
         angle = sector_angle(index)
         center = (
@@ -74,12 +74,10 @@ def build_carousel() -> cq.Shape:
         )
         body = body.cut(sphere(DETENT_BALL_R + 0.12, center))
 
-    # Unique deeper CLOSED keeper pocket at the front position.
-    angle = sector_angle(0)
-    center = (
-        CLOSED_DETENT_R * math.cos(math.radians(angle)),
-        CLOSED_DETENT_R * math.sin(math.radians(angle)),
+    closed_center = (
+        0.0,
+        -CLOSED_DETENT_R,
         -DETENT_BALL_R + 0.58,
     )
-    body = body.cut(sphere(DETENT_BALL_R + 0.18, center))
+    body = body.cut(sphere(DETENT_BALL_R + 0.18, closed_center))
     return body

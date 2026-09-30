@@ -1,0 +1,4 @@
+slug = "weekly-pill-organizer"
+display_name = "Weekly Pill Organizer"
+backend = "cadquery"
+module = "weekly_pill_organizer.project"
