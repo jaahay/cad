@@ -18,6 +18,7 @@ package = false
 
 [tool.pytest.ini_options]
 testpaths = ["projects"]
+addopts = ["--import-mode=importlib"]
 pythonpath = [
   "projects/tactile-dice/src",
   "projects/rotary-vault/src",
