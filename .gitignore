@@ -1,0 +1,55 @@
+# Python / CadQuery
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE / editor noise
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# CadQuery / OCCT temp files
+*.brep~
+*.bak
+*.tmp
+*.log
+
+# Generated CAD exports
+build/
+dist/
+exports/
+generated/
+
+# Generated mesh / manufacturing files
+*.stl
+*.3mf
+*.obj
+
+# Generated interchange CAD
+*.step
+*.stp
+
+# Generated previews / renders
+previews/generated/
+renders/
+
+# Slicer / printer temporary files
+*.gcode
+*.bgcode
+
+# Misc archives
+*.zip
+*.tar.gz
