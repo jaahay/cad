@@ -1,0 +1,9 @@
+# Binary CAD/manufacturing artifacts have no useful line diff.
+*.stl binary
+*.3mf binary
+*.obj binary
+*.step binary
+*.stp binary
+*.gcode binary
+*.bgcode binary
+*.png binary
