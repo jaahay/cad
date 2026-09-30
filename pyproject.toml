@@ -18,4 +18,7 @@ package = false
 
 [tool.pytest.ini_options]
 testpaths = ["projects"]
-pythonpath = ["projects/tactile-dice/src"]
+pythonpath = [
+  "projects/tactile-dice/src",
+  "projects/rotary-vault/src",
+]

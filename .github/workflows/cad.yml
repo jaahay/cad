@@ -23,3 +23,7 @@ jobs:
         run: uv run python tools/export_project.py tactile-dice
       - name: Validate tactile-dice meshes
         run: uv run python tools/validate_mesh.py build/tactile-dice/stl
+      - name: Generate rotary-vault exports
+        run: uv run python tools/export_project.py rotary-vault
+      - name: Validate rotary-vault meshes
+        run: uv run python tools/validate_mesh.py build/rotary-vault/stl

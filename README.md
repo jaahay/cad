@@ -5,6 +5,7 @@ Source-controlled parametric CAD projects and the tooling used to build and vali
 ## Projects
 
 - [`projects/tactile-dice`](projects/tactile-dice/) — tactile, kid-friendly d6 prototypes targeting a Bambu Lab P2S workflow.
+- [`projects/rotary-vault`](projects/rotary-vault/) — compact weekly rotary pill-organizer prototype with seven daily cavities plus a mechanically solid CLOSED sector.
 
 ## Repository structure
 
@@ -37,7 +38,9 @@ With `uv`:
 uv sync
 uv run pytest
 uv run python tools/export_project.py tactile-dice
+uv run python tools/export_project.py rotary-vault
 uv run python tools/validate_mesh.py build/tactile-dice/stl
+uv run python tools/validate_mesh.py build/rotary-vault/stl
 ```
 
-If `make` is available, `make tactile-dice` generates, validates, and tests the tactile-dice project. `make clean` removes all generated output.
+If `make` is available, `make tactile-dice` or `make rotary-vault` generates, validates, and tests the selected project. `make clean` removes all generated output.

@@ -1,7 +1,7 @@
 UV ?= uv
 PROJECT ?= tactile-dice
 
-.PHONY: all sync generate validate test clean tactile-dice
+.PHONY: all sync generate validate test clean tactile-dice rotary-vault
 
 all: generate validate test
 
@@ -22,3 +22,6 @@ clean:
 
 tactile-dice:
 	$(MAKE) all PROJECT=tactile-dice
+
+rotary-vault:
+	$(MAKE) all PROJECT=rotary-vault
