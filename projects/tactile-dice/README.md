@@ -13,7 +13,7 @@ The first pass deliberately uses conventional recessed circular pips on every bo
 - Nominal size: **24 x 24 x 24 mm**
 - Values: exactly **1 through 6**, once each
 - Opposites: **1↔6, 2↔5, 3↔4**
-- Orientation: \`+Z=1, -Z=6, +Y=2, -Y=5, +X=3, -X=4\`
+- Orientation: `+Z=1, -Z=6, +Y=2, -Y=5, +X=3, -X=4`
 - Pip style: shallow spherical recess
 - Pip depth: **0.9 mm**
 - Pip pitch from face center: **4.7 mm**
@@ -24,43 +24,43 @@ The generator validates the 1–6 mapping and opposite-face rule before producin
 
 ## First body designs
 
-- \`mochi_soft\` — 3.8 mm edge radius; soft rounded baseline
-- \`spherocube\` — 5.8 mm edge radius; deliberately more spherical
-- \`facet\` — 2.4 mm chamfer; crisp geometric body
-- \`edge_channel\` — rounded body with shallow perimeter channels kept away from the pip field
-- \`corner_pocket\` — rounded body with eight symmetric shallow corner scallops
+- `mochi_soft` — 3.8 mm edge radius; soft rounded baseline
+- `spherocube` — 5.8 mm edge radius; deliberately more spherical
+- `facet` — 2.4 mm chamfer; crisp geometric body
+- `edge_channel` — rounded body with shallow perimeter channels kept away from the pip field
+- `corner_pocket` — rounded body with eight symmetric shallow corner scallops
 
 ## Setup
 
-Python dependencies used for this first pass are pinned in \`requirements.txt\`.
+Python dependencies used for this first pass are pinned in `requirements.txt`.
 
 Windows PowerShell:
 
-\`\`\`powershell
+```powershell
 py -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
 .venv\Scripts\python src\dice_family.py
 .venv\Scripts\python src\repair_validate_stl.py
-\`\`\`
+```
 
 macOS/Linux:
 
-\`\`\`sh
+```sh
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r requirements.txt
 python src/dice_family.py
 python src/repair_validate_stl.py
-\`\`\`
+```
 
-If \`make\` is available, \`make all\` performs the generation and STL validation steps.
+If `make` is available, `make all` performs the generation and STL validation steps.
 
 ## Generated files
 
 Generation creates:
 
-- \`step/\` — interoperable CAD exports
-- \`stl/\` — slicer-ready mesh exports
+- `step/` — interoperable CAD exports
+- `stl/` — slicer-ready mesh exports
 
 These are generated artifacts and are ignored by Git by default. A later print milestone may publish exact STL/3MF files through a tagged GitHub release.
 
