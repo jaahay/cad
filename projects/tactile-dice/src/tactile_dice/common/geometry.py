@@ -1,4 +1,4 @@
-"""Reusable geometric primitives for the tactile-dice family."""
+"""Geometric primitives shared by tactile-dice blueprints."""
 
 import cadquery as cq
 
@@ -55,7 +55,9 @@ def corner_pocket_cube() -> cq.Shape:
         for sy in (-1, 1):
             for sz in (-1, 1):
                 sphere = wp_solid(
-                    cq.Workplane("XY").sphere(radius).translate((sx * center, sy * center, sz * center))
+                    cq.Workplane("XY")
+                    .sphere(radius)
+                    .translate((sx * center, sy * center, sz * center))
                 )
                 body = body.cut(sphere)
     return body

@@ -18,4 +18,4 @@ package = false
 
 [tool.pytest.ini_options]
 testpaths = ["projects"]
-pythonpath = ["projects/tactile-dice/src"]
+addopts = ["--import-mode=importlib"]

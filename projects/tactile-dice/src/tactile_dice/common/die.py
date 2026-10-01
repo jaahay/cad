@@ -1,8 +1,8 @@
-"""Tactile-dice model definitions."""
+"""Shared d6 semantics and pip finishing."""
 
 import cadquery as cq
 
-from .geometry import chamfered_cube, corner_pocket_cube, edge_channel_cube, pip_sphere, rounded_cube
+from .geometry import pip_sphere
 from .parameters import FACE_VALUES, OPPOSITE_FACES, PIP_OFFSET, PIPS
 
 
@@ -22,22 +22,14 @@ def validate_definition() -> None:
 
 def add_face_pips(body: cq.Shape, face: str, value: int) -> cq.Shape:
     for horizontal, vertical in PIPS[value]:
-        body = body.cut(pip_sphere(face, horizontal * PIP_OFFSET, vertical * PIP_OFFSET))
+        body = body.cut(
+            pip_sphere(face, horizontal * PIP_OFFSET, vertical * PIP_OFFSET)
+        )
     return body
 
 
 def finish_die(body: cq.Shape) -> cq.Shape:
+    validate_definition()
     for face, value in FACE_VALUES.items():
         body = add_face_pips(body, face, value)
     return body
-
-
-def build_all() -> dict[str, cq.Shape]:
-    validate_definition()
-    return {
-        "mochi_soft": finish_die(rounded_cube(3.8)),
-        "spherocube": finish_die(rounded_cube(5.8)),
-        "facet": finish_die(chamfered_cube(2.4)),
-        "edge_channel": finish_die(edge_channel_cube()),
-        "corner_pocket": finish_die(corner_pocket_cube()),
-    }

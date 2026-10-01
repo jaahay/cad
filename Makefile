@@ -1,24 +1,33 @@
 UV ?= uv
-PROJECT ?= tactile-dice
+PROJECT ?=
+BLUEPRINT ?=
 
-.PHONY: all sync generate validate test clean tactile-dice
+.PHONY: all sync list build build-all validate validate-all test clean
 
-all: generate validate test
+all: test build-all validate-all
 
 sync:
 	$(UV) sync
 
-generate:
-	$(UV) run python tools/export_project.py $(PROJECT)
+list:
+	$(UV) run python tools/export_project.py --list
+
+build:
+	@test -n "$(PROJECT)" || (echo "PROJECT is required" >&2; exit 2)
+	$(UV) run python tools/export_project.py $(PROJECT) $(if $(BLUEPRINT),--blueprint $(BLUEPRINT),)
+
+build-all:
+	$(UV) run python tools/export_project.py --all
 
 validate:
-	$(UV) run python tools/validate_mesh.py build/$(PROJECT)/stl
+	@test -n "$(PROJECT)" || (echo "PROJECT is required" >&2; exit 2)
+	$(UV) run python tools/validate_mesh.py build/$(PROJECT)$(if $(BLUEPRINT),/$(BLUEPRINT),)
+
+validate-all:
+	$(UV) run python tools/validate_mesh.py build
 
 test:
 	$(UV) run pytest
 
 clean:
 	rm -rf build
-
-tactile-dice:
-	$(MAKE) all PROJECT=tactile-dice
