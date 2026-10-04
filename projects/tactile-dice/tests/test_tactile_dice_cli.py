@@ -29,28 +29,44 @@ def test_cli_lists_friendly_choices_and_script_ids() -> None:
     assert "Number styles:" in result.stdout
     assert "Recessed pips" in result.stdout
     assert "[id: bubbles]" in result.stdout
+    assert "--handoff" in result.stdout
+    assert "--batch shape" in result.stdout
 
 
-def test_interactive_cli_can_quit_without_creating_a_die() -> None:
+def test_interactive_cli_can_quit_from_workflow_menu() -> None:
     result = run_cli(input_text="q\n")
 
     assert result.returncode == 0, result.stderr
-    assert "Choose a shape" in result.stdout
-    assert "No die created." in result.stdout
+    assert "What would you like to make?" in result.stdout
+    assert "Make one die" in result.stdout
+    assert "Prototype batch" in result.stdout
+    assert "No files created." in result.stdout
 
 
-def test_interactive_cli_can_go_back_from_number_style() -> None:
-    result = run_cli(input_text="1\nb\nq\n")
+def test_single_die_flow_can_back_out_to_workflow_menu() -> None:
+    result = run_cli(input_text="1\n1\nb\nb\nq\n")
 
     assert result.returncode == 0, result.stderr
     assert result.stdout.count("\nChoose a shape:\n") == 2
     assert "Choose the number style" in result.stdout
-    assert "No die created." in result.stdout
+    assert result.stdout.count("\nWhat would you like to make?:\n") == 2
+    assert "No files created." in result.stdout
 
 
-def test_cli_help_uses_user_facing_number_language() -> None:
+def test_batch_flow_can_back_out_to_workflow_menu() -> None:
+    result = run_cli(input_text="2\nb\nq\n")
+
+    assert result.returncode == 0, result.stderr
+    assert "Choose the baseline shape" in result.stdout
+    assert result.stdout.count("\nWhat would you like to make?:\n") == 2
+    assert "No files created." in result.stdout
+
+
+def test_cli_help_uses_user_facing_number_language_and_output_modes() -> None:
     result = run_cli("--help")
 
     assert result.returncode == 0
     assert "--numbers" in result.stdout
     assert "--marks" not in result.stdout
+    assert "--handoff" in result.stdout
+    assert "--batch {shape,numbers}" in result.stdout

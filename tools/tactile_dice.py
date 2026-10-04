@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+from importlib import import_module
 from pathlib import Path
+import shutil
 import sys
 
 from export_project import export_parts, repo_root
@@ -14,6 +16,16 @@ from project_registry import discover_projects, load_project_module
 PROJECT_SLUG = "tactile-dice"
 BACK = "__back__"
 
+WORKFLOW_OPTIONS = (
+    ("single", "Make one die", "Create a neutral print handoff."),
+    ("batch", "Prototype batch", "Compare one controlled change on one plate."),
+)
+
+BATCH_AXIS_OPTIONS = (
+    ("shape", "Shape", "Keep the number style fixed and compare shapes."),
+    ("numbers", "Number style", "Keep the shape fixed and compare number styles."),
+)
+
 
 def load_dice_project():
     projects = discover_projects()
@@ -22,6 +34,11 @@ def load_dice_project():
     except KeyError as exc:
         raise SystemExit(f"CAD project {PROJECT_SLUG!r} was not discovered") from exc
     return spec, load_project_module(spec)
+
+
+def handoff_api():
+    """Load project-specific handoff helpers after project discovery sets sys.path."""
+    return import_module("tactile_dice.handoff")
 
 
 def print_options(module) -> None:
@@ -37,6 +54,8 @@ def print_options(module) -> None:
     print()
     print("For scripted use:")
     print("  ./dice --body mochi-soft --numbers bubbles")
+    print("  ./dice --body mochi-soft --numbers bubbles --handoff")
+    print("  ./dice --body mochi-soft --numbers bubbles --batch shape")
     print("  ./dice --all")
 
 
@@ -49,7 +68,7 @@ def choose(
     print()
     print(f"{title}:")
     for index, (_, label, description) in enumerate(options, start=1):
-        print(f"  {index}) {label:<16} {description}")
+        print(f"  {index}) {label:<18} {description}")
 
     commands = "B to go back, Q to quit" if allow_back else "Q to quit"
     while True:
@@ -65,7 +84,7 @@ def choose(
         print("That choice was not recognized.")
 
 
-def confirm(body_label: str, number_label: str) -> str:
+def confirm_design(body_label: str, number_label: str, prompt: str) -> str:
     print()
     print("Your die:")
     print(f"  Shape:   {body_label}")
@@ -74,7 +93,7 @@ def confirm(body_label: str, number_label: str) -> str:
     print()
 
     while True:
-        raw = input("Create it? [Y] Create  [B] Back  [Q] Quit: ").strip().lower()
+        raw = input(f"{prompt} [Y] Yes  [B] Back  [Q] Quit: ").strip().lower()
         if raw in {"", "y", "yes"}:
             return "create"
         if raw in {"b", "back"}:
@@ -94,6 +113,18 @@ def option_by_slug(
     raise ValueError(slug)
 
 
+def design_ref(module, body: str, number_style: str):
+    api = handoff_api()
+    body_label = option_by_slug(tuple(module.body_options()), body)[1]
+    number_label = option_by_slug(tuple(module.mark_options()), number_style)[1]
+    return api.DesignRef(
+        body=body,
+        number_style=number_style,
+        shape_label=body_label,
+        number_label=number_label,
+    )
+
+
 def output_directory(body: str, number_style: str) -> Path:
     return (
         repo_root()
@@ -101,6 +132,26 @@ def output_directory(body: str, number_style: str) -> Path:
         / PROJECT_SLUG
         / "designs"
         / f"{body}--{number_style}"
+    )
+
+
+def handoff_directory(body: str, number_style: str) -> Path:
+    return (
+        repo_root()
+        / "build"
+        / PROJECT_SLUG
+        / "handoffs"
+        / f"{body}--{number_style}"
+    )
+
+
+def batch_directory(body: str, number_style: str, axis: str) -> Path:
+    return (
+        repo_root()
+        / "build"
+        / PROJECT_SLUG
+        / "prototype-batches"
+        / f"{body}--{number_style}--vary-{axis}"
     )
 
 
@@ -121,7 +172,7 @@ def export_design(
         print()
         print(f"Created: {body_label} + {number_label}")
         print()
-        print("Open this file in Bambu Studio:")
+        print("STL:")
         print(f"  {(output / 'stl' / 'die.stl').relative_to(repo_root())}")
         print()
         print("Editable CAD:")
@@ -130,18 +181,119 @@ def export_design(
     return output
 
 
-def run_interactive(module) -> int:
+def create_handoff(
+    module,
+    body: str,
+    number_style: str,
+    *,
+    output: Path | None = None,
+    announce: bool = True,
+) -> Path:
+    api = handoff_api()
+    design = design_ref(module, body, number_style)
+    destination = output or handoff_directory(body, number_style)
+
+    parts = module.build_design(body, number_style)
+    export_parts(parts, destination)
+    api.write_handoff_manifest(destination, design)
+
+    if announce:
+        print()
+        print(f"Created print handoff: {design.shape_label} + {design.number_label}")
+        print(f"  {destination.relative_to(repo_root())}")
+        print()
+        print("Open this file in Bambu Studio:")
+        print(f"  {(destination / 'stl' / 'die.stl').relative_to(repo_root())}")
+        print()
+        print("Editable CAD:")
+        print(f"  {(destination / 'step' / 'die.step').relative_to(repo_root())}")
+        print()
+        print("Handoff manifest:")
+        print(f"  {(destination / 'manifest.json').relative_to(repo_root())}")
+
+    return destination
+
+
+def create_prototype_batch(
+    module,
+    body: str,
+    number_style: str,
+    axis: str,
+    *,
+    announce: bool = True,
+) -> Path:
+    api = handoff_api()
+    bodies = tuple(slug for slug, _, _ in module.body_options())
+    number_styles = tuple(slug for slug, _, _ in module.mark_options())
+    specs = api.variation_specs(body, number_style, axis, bodies, number_styles)
+    baseline = design_ref(module, body, number_style)
+    output = batch_directory(body, number_style, axis)
+
+    if output.exists():
+        shutil.rmtree(output)
+
+    candidates = []
+    for index, (candidate_body, candidate_numbers) in enumerate(specs):
+        label = api.candidate_label(index)
+        design = design_ref(module, candidate_body, candidate_numbers)
+        candidate_name = f"{label}-{design.slug}"
+        candidate_dir = output / "candidates" / candidate_name
+
+        create_handoff(
+            module,
+            candidate_body,
+            candidate_numbers,
+            output=candidate_dir,
+            announce=False,
+        )
+        plate_stl = api.copy_plate_stl(
+            candidate_dir / "stl" / "die.stl",
+            output / "plate",
+            label,
+            design,
+        )
+        candidates.append(
+            api.BatchCandidate(
+                label=label,
+                design=design,
+                handoff_dir=f"candidates/{candidate_name}",
+                plate_stl=f"plate/{plate_stl.name}",
+            )
+        )
+
+    api.write_batch_summary(output, baseline, axis, tuple(candidates))
+
+    if announce:
+        axis_label = "shape" if axis == "shape" else "number style"
+        print()
+        print(
+            f"Created prototype batch: {len(candidates)} candidates, "
+            f"varying {axis_label}."
+        )
+        print(f"  {output.relative_to(repo_root())}")
+        print()
+        print("Drop all STL files from this folder into Bambu Studio:")
+        print(f"  {(output / 'plate').relative_to(repo_root())}")
+        print()
+        for candidate in candidates:
+            print(
+                f"  {candidate.label}) "
+                f"{candidate.design.shape_label} + {candidate.design.number_label}"
+            )
+
+    return output
+
+
+def run_single_interactive(module) -> str:
     bodies = tuple(module.body_options())
     number_styles = tuple(module.mark_options())
 
-    print("Tactile Dice")
-    print("Choose a shape and number style. You can go back before creating.")
-
     while True:
-        body = choose("Choose a shape", bodies, allow_back=False)
+        body = choose("Choose a shape", bodies, allow_back=True)
         if body is None:
-            print("No die created.")
-            return 0
+            return "quit"
+        if body == BACK:
+            return "back"
 
         while True:
             number_style = choose(
@@ -150,28 +302,126 @@ def run_interactive(module) -> int:
                 allow_back=True,
             )
             if number_style is None:
-                print("No die created.")
-                return 0
+                return "quit"
             if number_style == BACK:
                 break
 
             body_label = option_by_slug(bodies, body)[1]
             number_label = option_by_slug(number_styles, number_style)[1]
-            action = confirm(body_label, number_label)
-
+            action = confirm_design(
+                body_label,
+                number_label,
+                "Create print handoff?",
+            )
             if action == "quit":
-                print("No die created.")
-                return 0
+                return "quit"
             if action == "back":
                 continue
 
-            export_design(module, body, number_style)
+            create_handoff(module, body, number_style)
+            return "created"
+
+
+def run_batch_interactive(module) -> str:
+    bodies = tuple(module.body_options())
+    number_styles = tuple(module.mark_options())
+
+    while True:
+        body = choose("Choose the baseline shape", bodies, allow_back=True)
+        if body is None:
+            return "quit"
+        if body == BACK:
+            return "back"
+
+        while True:
+            number_style = choose(
+                "Choose the baseline number style",
+                number_styles,
+                allow_back=True,
+            )
+            if number_style is None:
+                return "quit"
+            if number_style == BACK:
+                break
+
+            while True:
+                axis = choose(
+                    "What should vary?",
+                    BATCH_AXIS_OPTIONS,
+                    allow_back=True,
+                )
+                if axis is None:
+                    return "quit"
+                if axis == BACK:
+                    break
+
+                api = handoff_api()
+                specs = api.variation_specs(
+                    body,
+                    number_style,
+                    axis,
+                    tuple(slug for slug, _, _ in bodies),
+                    tuple(slug for slug, _, _ in number_styles),
+                )
+                baseline_body_label = option_by_slug(bodies, body)[1]
+                baseline_number_label = option_by_slug(number_styles, number_style)[1]
+
+                print()
+                print("Prototype batch:")
+                print(
+                    f"  Baseline: {baseline_body_label} + {baseline_number_label}"
+                )
+                print(
+                    "  Vary:     "
+                    + ("Shape" if axis == "shape" else "Number style")
+                )
+                print(f"  Pieces:   {len(specs)}")
+
+                action = confirm_design(
+                    baseline_body_label,
+                    baseline_number_label,
+                    "Create prototype batch?",
+                )
+                if action == "quit":
+                    return "quit"
+                if action == "back":
+                    continue
+
+                create_prototype_batch(module, body, number_style, axis)
+                return "created"
+
+
+def run_interactive(module) -> int:
+    print("Tactile Dice")
+    print("Make one die or compare a controlled set of variants.")
+
+    while True:
+        workflow = choose(
+            "What would you like to make?",
+            WORKFLOW_OPTIONS,
+            allow_back=False,
+        )
+        if workflow is None:
+            print("No files created.")
+            return 0
+
+        if workflow == "single":
+            result = run_single_interactive(module)
+        elif workflow == "batch":
+            result = run_batch_interactive(module)
+        else:
+            raise AssertionError(workflow)
+
+        if result == "quit":
+            print("No files created.")
+            return 0
+        if result == "created":
             return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Create a tactile d6 and export STEP/STL files."
+        description="Create tactile d6 designs, print handoffs, and prototype batches."
     )
     parser.add_argument("--body", help="Shape id to use")
     parser.add_argument("--numbers", help="Number-style id to use")
@@ -180,6 +430,16 @@ def main(argv: list[str] | None = None) -> int:
         "--all",
         action="store_true",
         help="Export every shape/number-style combination",
+    )
+    parser.add_argument(
+        "--handoff",
+        action="store_true",
+        help="Create a neutral single-design print handoff",
+    )
+    parser.add_argument(
+        "--batch",
+        choices=("shape", "numbers"),
+        help="Create a baseline-first prototype batch varying one axis",
     )
     args = parser.parse_args(argv)
 
@@ -190,8 +450,11 @@ def main(argv: list[str] | None = None) -> int:
     number_names = {slug for slug, _, _ in number_styles}
 
     if args.list:
-        if args.body or args.numbers or args.all:
-            parser.error("--list cannot be combined with --body, --numbers, or --all")
+        if args.body or args.numbers or args.all or args.handoff or args.batch:
+            parser.error(
+                "--list cannot be combined with --body, --numbers, --all, "
+                "--handoff, or --batch"
+            )
         print_options(module)
         return 0
 
@@ -207,8 +470,10 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     if args.all:
-        if args.body or args.numbers:
-            parser.error("--all cannot be combined with --body or --numbers")
+        if args.body or args.numbers or args.handoff or args.batch:
+            parser.error(
+                "--all cannot be combined with --body, --numbers, --handoff, or --batch"
+            )
         count = 0
         for body, _, _ in bodies:
             for number_style, _, _ in number_styles:
@@ -217,7 +482,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Created {count} Tactile Dice designs under build/tactile-dice/designs.")
         return 0
 
-    if not args.body and not args.numbers:
+    if args.handoff and args.batch:
+        parser.error("--handoff and --batch are separate output modes")
+
+    if not args.body and not args.numbers and not args.handoff and not args.batch:
         return run_interactive(module)
 
     interactive = sys.stdin.isatty()
@@ -226,7 +494,7 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("--body is required in non-interactive mode")
         body = choose("Choose a shape", bodies, allow_back=False)
         if body is None:
-            print("No die created.")
+            print("No files created.")
             return 0
     else:
         body = args.body
@@ -240,12 +508,18 @@ def main(argv: list[str] | None = None) -> int:
             allow_back=False,
         )
         if number_style is None:
-            print("No die created.")
+            print("No files created.")
             return 0
     else:
         number_style = args.numbers
 
-    export_design(module, body, number_style)
+    if args.batch:
+        create_prototype_batch(module, body, number_style, args.batch)
+    elif args.handoff:
+        create_handoff(module, body, number_style)
+    else:
+        export_design(module, body, number_style)
+
     return 0
 
 
