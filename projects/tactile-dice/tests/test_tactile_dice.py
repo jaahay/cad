@@ -32,8 +32,21 @@ EXPECTED_MARK_STYLES = (
 def test_project_contract_and_standard_d6_definition() -> None:
     validate_project()
     assert blueprints() == EXPECTED_BLUEPRINTS
-    assert tuple(name for name, _ in body_options()) == EXPECTED_BLUEPRINTS
-    assert tuple(name for name, _ in mark_options()) == EXPECTED_MARK_STYLES
+    assert tuple(slug for slug, _, _ in body_options()) == EXPECTED_BLUEPRINTS
+    assert tuple(slug for slug, _, _ in mark_options()) == EXPECTED_MARK_STYLES
+    assert [label for _, label, _ in body_options()] == [
+        "Mochi",
+        "Spherocube",
+        "Faceted",
+        "Edge Channels",
+        "Corner Pockets",
+        "Nested Steps",
+    ]
+    assert [label for _, label, _ in mark_options()] == [
+        "Recessed pips",
+        "Bubbles",
+        "Buttons",
+    ]
     assert set(FACE_VALUES.values()) == set(range(1, 7))
     assert all(FACE_VALUES[a] + FACE_VALUES[b] == 7 for a, b in OPPOSITE_FACES)
     assert all(len(PIPS[value]) == value for value in range(1, 7))

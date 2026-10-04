@@ -9,19 +9,19 @@ import cadquery as cq
 from .common.die import MARK_STYLES, finish_die, validate_definition
 
 
-BODY_DESCRIPTIONS = {
-    "mochi-soft": "Soft rounded baseline.",
-    "spherocube": "Heavily rounded, almost ball-like cube.",
-    "facet": "Broad chamfers and crisp planar facets.",
-    "edge-channel": "Shallow perimeter channels around the body.",
-    "corner-pocket": "Symmetric scallops carved into all eight corners.",
-    "nested-steps": "Two shallow inset face levels form a tactile frame.",
+BODY_OPTIONS = {
+    "mochi-soft": ("Mochi", "Soft and rounded."),
+    "spherocube": ("Spherocube", "Very round and smooth."),
+    "facet": ("Faceted", "Crisp angled edges."),
+    "edge-channel": ("Edge Channels", "Grooves around the edges."),
+    "corner-pocket": ("Corner Pockets", "Scooped corners."),
+    "nested-steps": ("Nested Steps", "Layered tactile faces."),
 }
 
-MARK_DESCRIPTIONS = {
-    "pips": "Classic shallow recessed round pips.",
-    "bubbles": "Low rounded bumps; one bump is one count.",
-    "buttons": "Broad low flat-topped bumps; one button is one count.",
+MARK_OPTIONS = {
+    "pips": ("Recessed pips", "Classic dice."),
+    "bubbles": ("Bubbles", "Smooth raised bumps."),
+    "buttons": ("Buttons", "Broad flat bumps."),
 }
 
 BLUEPRINT_MODULES = {
@@ -38,20 +38,20 @@ def blueprints() -> tuple[str, ...]:
     return tuple(BLUEPRINT_MODULES)
 
 
-def body_options() -> tuple[tuple[str, str], ...]:
-    return tuple(BODY_DESCRIPTIONS.items())
+def body_options() -> tuple[tuple[str, str, str], ...]:
+    return tuple((slug, label, description) for slug, (label, description) in BODY_OPTIONS.items())
 
 
-def mark_options() -> tuple[tuple[str, str], ...]:
-    return tuple(MARK_DESCRIPTIONS.items())
+def mark_options() -> tuple[tuple[str, str, str], ...]:
+    return tuple((slug, label, description) for slug, (label, description) in MARK_OPTIONS.items())
 
 
 def validate_project() -> None:
     validate_definition()
-    if tuple(MARK_DESCRIPTIONS) != MARK_STYLES:
-        raise ValueError("Tactile Dice mark descriptions must match supported mark styles")
-    if tuple(BODY_DESCRIPTIONS) != blueprints():
-        raise ValueError("Tactile Dice body descriptions must match blueprints")
+    if tuple(MARK_OPTIONS) != MARK_STYLES:
+        raise ValueError("Tactile Dice number-style metadata must match supported mark styles")
+    if tuple(BODY_OPTIONS) != blueprints():
+        raise ValueError("Tactile Dice shape metadata must match blueprints")
 
 
 def build_body(body_name: str) -> cq.Shape:
@@ -70,7 +70,7 @@ def build_body(body_name: str) -> cq.Shape:
 
 def build_design(body_name: str, mark_style: str) -> dict[str, cq.Shape]:
     validate_project()
-    if mark_style not in MARK_DESCRIPTIONS:
+    if mark_style not in MARK_OPTIONS:
         raise ValueError(f"Unknown tactile-dice mark style: {mark_style}")
     return {"die": finish_die(build_body(body_name), mark_style)}
 
