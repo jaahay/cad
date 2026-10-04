@@ -1,13 +1,13 @@
-"""More spherical tactile-die body blueprint."""
+"""Tactile-die body with two shallow inset face levels."""
 
 import cadquery as cq
 
 from ..common.die import finish_die
-from ..common.geometry import rounded_cube
+from ..common.geometry import nested_steps_cube
 
 
 def body() -> cq.Shape:
-    return rounded_cube(5.8)
+    return nested_steps_cube()
 
 
 def build() -> dict[str, cq.Shape]:
