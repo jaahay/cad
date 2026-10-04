@@ -6,6 +6,19 @@ PIP_OFFSET = 4.7
 PIP_SPHERE_RADIUS = 2.4
 PIP_DEPTH = 0.9
 
+# Raised tactile count marks.
+BUBBLE_RADIUS = 2.0
+BUBBLE_HEIGHT = 0.75
+BUTTON_RADIUS = 1.75
+BUTTON_HEIGHT = 0.65
+BUTTON_EMBED = 0.65
+
+# Nested-steps body treatment.
+NESTED_OUTER_PANEL = 17.5
+NESTED_INNER_PANEL = 13.5
+NESTED_OUTER_DEPTH = 0.25
+NESTED_INNER_DEPTH = 0.45
+
 # Standard d6 layout chosen for this family:
 # +Z=1, -Z=6, +Y=2, -Y=5, +X=3, -X=4.
 # Opposite faces sum to 7.

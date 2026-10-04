@@ -2,7 +2,7 @@ UV ?= uv
 PROJECT ?=
 BLUEPRINT ?=
 
-.PHONY: all sync list build build-all validate validate-all test clean
+.PHONY: all sync list build build-all validate validate-all test dice dice-list dice-all clean
 
 all: test build-all validate-all
 
@@ -28,6 +28,15 @@ validate-all:
 
 test:
 	$(UV) run pytest
+
+dice:
+	$(UV) run python tools/tactile_dice.py
+
+dice-list:
+	$(UV) run python tools/tactile_dice.py --list
+
+dice-all:
+	$(UV) run python tools/tactile_dice.py --all
 
 clean:
 	rm -rf build
