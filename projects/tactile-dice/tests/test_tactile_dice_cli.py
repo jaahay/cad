@@ -43,7 +43,7 @@ def test_interactive_cli_can_go_back_from_number_style() -> None:
     result = run_cli(input_text="1\nb\nq\n")
 
     assert result.returncode == 0, result.stderr
-    assert result.stdout.count("Choose a shape") == 2
+    assert result.stdout.count("\nChoose a shape:\n") == 2
     assert "Choose the number style" in result.stdout
     assert "No die created." in result.stdout
 
