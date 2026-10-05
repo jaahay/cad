@@ -2,59 +2,142 @@
 
 Parametric CAD for a family of tactile d6 designs intended for simple FDM printing and kid-friendly handling.
 
-This directory is one **project family**. Its alternative viable die bodies are **blueprints** within that project rather than separate projects.
+The normal experience is intentionally simple: make one die, or create a prototype batch that changes one thing at a time.
 
-## Status
-
-**First CAD pass.** The current blueprints generate valid 24 mm solids and exported STL meshes are checked for watertightness and winding consistency. Geometry tests enforce the d6 definition, one-solid output, and nominal 24 mm envelope. The designs have not yet been validated in Bambu Studio on the P2S or physically printed.
-
-The first pass deliberately uses conventional recessed circular pips on every body. This isolates the underlying body geometry before combining it with Paw, Critter, or other tactile-count motifs.
-
-## Shared d6 definition
-
-- Nominal size: **24 x 24 x 24 mm**
-- Values: exactly **1 through 6**, once each
-- Opposites: **1↔6, 2↔5, 3↔4**
-- Orientation: `+Z=1, -Z=6, +Y=2, -Y=5, +X=3, -X=4`
-- Pip style: shallow spherical recess
-- Pip depth: **0.9 mm**
-- Pip pitch from face center: **4.7 mm**
-- No numerals
-- One solid per die
-
-## Blueprints
-
-- `mochi-soft` — 3.8 mm edge radius; soft rounded baseline
-- `spherocube` — 5.8 mm edge radius; deliberately more spherical
-- `facet` — 2.4 mm chamfer; crisp geometric body
-- `edge-channel` — rounded body with shallow perimeter channels kept away from the pip field
-- `corner-pocket` — rounded body with eight symmetric shallow corner scallops
-
-## Source layout
-
-```text
-cad.toml
-src/tactile_dice/
-  project.py
-  common/
-    parameters.py
-    geometry.py
-    die.py
-  blueprints/
-    mochi.py
-    spherocube.py
-    facet.py
-    edge_channel.py
-    corner_pocket.py
-tests/
-  test_tactile_dice.py
-```
-
-`common/` contains only geometry and rules shared by multiple tactile-dice blueprints. Each blueprint exposes its own build function.
-
-## Generate and validate
+## Start here
 
 From the repository root:
+
+**Windows PowerShell**
+
+```powershell
+.\\dice
+```
+
+**macOS / Linux**
+
+```sh
+./dice
+```
+
+The designer opens with two workflows:
+
+```text
+Tactile Dice
+Make one die or compare a controlled set of variants.
+
+What would you like to make?
+  1) Make one die        Create a neutral print handoff.
+  2) Prototype batch     Compare one controlled change on one plate.
+```
+
+### Make one die
+
+Choose a friendly shape and number style, confirm it, and the designer creates a neutral print handoff:
+
+```text
+build/tactile-dice/handoffs/mochi-soft--bubbles/
+  manifest.json
+  step/die.step
+  stl/die.stl
+```
+
+The CLI tells you which STL to open in Bambu Studio and preserves the STEP file for editable CAD.
+
+### Prototype batch
+
+Choose a baseline die, then choose one axis to vary:
+
+- **Shape** — keep the number style fixed and compare every shape.
+- **Number style** — keep the shape fixed and compare every number style.
+
+Candidate **A** is always the baseline. Every other candidate changes only the selected axis.
+
+A batch looks like:
+
+```text
+build/tactile-dice/prototype-batches/mochi-soft--bubbles--vary-shape/
+  batch.json
+  README.md
+  candidates/
+    A-mochi-soft--bubbles/
+      manifest.json
+      step/die.step
+      stl/die.stl
+    B-.../
+    C-.../
+  plate/
+    A-mochi-soft--bubbles.stl
+    B-....stl
+    C-....stl
+```
+
+The `plate/` directory is intentionally flat: select all of its STLs and open or drag them into Bambu Studio together.
+
+There is **no `.3mf` generation** and no Bambu-specific project encoding. The CAD workspace owns geometry and neutral manufacturing handoff; the slicer owns slicing and plate state.
+
+## Current design choices
+
+There are currently **6 shapes x 3 number styles = 18 combinations**.
+
+Shapes:
+
+- **Mochi** — soft and rounded
+- **Spherocube** — very round and smooth
+- **Faceted** — crisp angled edges
+- **Edge Channels** — grooves around the edges
+- **Corner Pockets** — scooped corners
+- **Nested Steps** — layered tactile faces
+
+Number styles:
+
+- **Recessed pips** — classic dice
+- **Bubbles** — smooth raised bumps
+- **Buttons** — broad flat bumps
+
+Every design keeps the same d6 rules:
+
+- nominal body size: **24 x 24 x 24 mm**
+- values **1 through 6**, once each
+- opposite faces **1↔6, 2↔5, 3↔4**
+- no numerals
+- one solid per die
+
+## Advanced / scripted use
+
+Friendly labels are for the interactive UI. Stable ids remain available for scripts:
+
+```sh
+# Show names, descriptions, and ids
+./dice --list
+
+# Export raw CAD files for one combination
+./dice --body mochi-soft --numbers bubbles
+
+# Create one neutral print handoff
+./dice --body mochi-soft --numbers bubbles --handoff
+
+# Create a baseline-first comparison batch
+./dice --body mochi-soft --numbers bubbles --batch shape
+./dice --body mochi-soft --numbers bubbles --batch numbers
+
+# Export all 18 raw combinations
+./dice --all
+```
+
+On Windows PowerShell, use `.\\dice` in place of `./dice`.
+
+Raw combinations remain under:
+
+```text
+build/tactile-dice/designs/<shape-id>--<number-style-id>/
+  step/die.step
+  stl/die.stl
+```
+
+## Repository blueprints
+
+The repository-facing blueprint model remains deliberately simpler than the interactive designer. Each blueprint is one underlying shape using classic recessed pips.
 
 ```sh
 uv run python tools/export_project.py tactile-dice
@@ -63,8 +146,4 @@ uv run python tools/validate_mesh.py build/tactile-dice
 uv run pytest projects/tactile-dice/tests
 ```
 
-Generated outputs are placed under `build/tactile-dice/<blueprint>/{step,stl}` and ignored by Git.
-
-## Printer handoff
-
-The intended first prototype workflow is deliberately plain: single material, no required paint, no support-dependent decorative features, and minimal post-processing. The next manufacturing validation step is to load generated models into Bambu Studio, inspect orientation and layers for the Bambu Lab P2S, and physically prototype selected blueprints.
+Generated STEP/STL outputs remain ignored build artifacts. Exact prototype or print-ready binaries can be attached to a tagged GitHub release when useful for handoff.

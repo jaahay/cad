@@ -27,6 +27,33 @@ def normalize_stl(path: Path) -> None:
     mesh.export(path)
 
 
+def export_parts(parts: dict[str, object], output: Path) -> Path:
+    """Export a non-empty part mapping to STEP and normalized STL files."""
+    if not isinstance(parts, dict) or not parts:
+        raise TypeError("parts must be a non-empty mapping")
+
+    step_dir = output / "step"
+    stl_dir = output / "stl"
+    step_dir.mkdir(parents=True, exist_ok=True)
+    stl_dir.mkdir(parents=True, exist_ok=True)
+
+    for part_name, model in parts.items():
+        if not isinstance(part_name, str) or not part_name:
+            raise TypeError(f"invalid part name {part_name!r}")
+
+        exporters.export(model, str(step_dir / f"{part_name}.step"))
+        stl_path = stl_dir / f"{part_name}.stl"
+        exporters.export(
+            model,
+            str(stl_path),
+            tolerance=0.03,
+            angularTolerance=0.08,
+        )
+        normalize_stl(stl_path)
+
+    return output
+
+
 def export_blueprint(spec: ProjectSpec, blueprint: str) -> Path:
     module = load_project_module(spec)
     module.validate_project()
@@ -39,30 +66,8 @@ def export_blueprint(spec: ProjectSpec, blueprint: str) -> Path:
         )
 
     parts = module.build(blueprint)
-    if not isinstance(parts, dict) or not parts:
-        raise TypeError(
-            f"{spec.slug}/{blueprint}: build() must return a non-empty part mapping"
-        )
-
     output = repo_root() / "build" / spec.slug / blueprint
-    step_dir = output / "step"
-    stl_dir = output / "stl"
-    step_dir.mkdir(parents=True, exist_ok=True)
-    stl_dir.mkdir(parents=True, exist_ok=True)
-
-    for part_name, model in parts.items():
-        if not isinstance(part_name, str) or not part_name:
-            raise TypeError(f"{spec.slug}/{blueprint}: invalid part name {part_name!r}")
-
-        exporters.export(model, str(step_dir / f"{part_name}.step"))
-        stl_path = stl_dir / f"{part_name}.stl"
-        exporters.export(
-            model,
-            str(stl_path),
-            tolerance=0.03,
-            angularTolerance=0.08,
-        )
-        normalize_stl(stl_path)
+    export_parts(parts, output)
 
     print(
         f"Exported {len(parts)} part(s) for "

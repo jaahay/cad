@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+cd "$ROOT"
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "The Tactile Dice designer needs uv. Install uv, then run ./dice again." >&2
+  exit 1
+fi
+
+exec uv run python tools/tactile_dice.py "$@"
