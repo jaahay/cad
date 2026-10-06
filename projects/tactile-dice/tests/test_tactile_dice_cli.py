@@ -68,6 +68,7 @@ def test_batch_flow_can_back_out_to_workflow_menu() -> None:
 
 def test_cli_help_uses_trait_language_and_output_modes() -> None:
     result = run_cli("--help")
+    normalized_help = " ".join(result.stdout.split())
 
     assert result.returncode == 0
     assert "--numbers" in result.stdout
@@ -75,5 +76,5 @@ def test_cli_help_uses_trait_language_and_output_modes() -> None:
     assert "--intensity" in result.stdout
     assert "--handoff" in result.stdout
     assert "--batch {shape,numbers,intensity,surprise}" in result.stdout
-    assert "one trait" in result.stdout
-    assert "one axis" not in result.stdout
+    assert "one trait" in normalized_help
+    assert "one axis" not in normalized_help
