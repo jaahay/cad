@@ -13,6 +13,11 @@ from .parameters import (
     NESTED_INNER_PANEL,
     NESTED_OUTER_DEPTH,
     NESTED_OUTER_PANEL,
+    PAW_PAD_HEIGHT,
+    PAW_PAD_RADIUS,
+    PAW_TOE_HEIGHT,
+    PAW_TOE_OFFSETS,
+    PAW_TOE_RADIUS,
     PIP_DEPTH,
     PIP_SPHERE_RADIUS,
     SIZE,
@@ -142,10 +147,35 @@ def pip_sphere(face: str, u: float, v: float) -> cq.Shape:
     return wp_solid(cq.Workplane("XY").sphere(PIP_SPHERE_RADIUS).translate(center))
 
 
-def bubble_sphere(face: str, u: float, v: float) -> cq.Shape:
-    distance = HALF - BUBBLE_RADIUS + BUBBLE_HEIGHT
+def raised_sphere(
+    face: str,
+    u: float,
+    v: float,
+    radius: float,
+    height: float,
+) -> cq.Shape:
+    distance = HALF - radius + height
     center = face_point(face, u, v, distance)
-    return wp_solid(cq.Workplane("XY").sphere(BUBBLE_RADIUS).translate(center))
+    return wp_solid(cq.Workplane("XY").sphere(radius).translate(center))
+
+
+def bubble_sphere(face: str, u: float, v: float) -> cq.Shape:
+    return raised_sphere(face, u, v, BUBBLE_RADIUS, BUBBLE_HEIGHT)
+
+
+def paw_mark(face: str, u: float, v: float) -> cq.Shape:
+    """Create one connected raised paw: a broad pad with four toe lobes."""
+    mark = raised_sphere(face, u, v, PAW_PAD_RADIUS, PAW_PAD_HEIGHT)
+    for offset_u, offset_v in PAW_TOE_OFFSETS:
+        toe = raised_sphere(
+            face,
+            u + offset_u,
+            v + offset_v,
+            PAW_TOE_RADIUS,
+            PAW_TOE_HEIGHT,
+        )
+        mark = mark.fuse(toe)
+    return mark
 
 
 def button_cylinder(face: str, u: float, v: float) -> cq.Shape:

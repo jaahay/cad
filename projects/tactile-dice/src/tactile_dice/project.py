@@ -22,6 +22,7 @@ MARK_OPTIONS = {
     "pips": ("Recessed pips", "Classic dice."),
     "bubbles": ("Bubbles", "Smooth raised bumps."),
     "buttons": ("Buttons", "Broad flat bumps."),
+    "paws": ("Paws", "Chunky raised paw prints."),
 }
 
 BLUEPRINT_MODULES = {

@@ -78,7 +78,7 @@ There is **no `.3mf` generation** and no Bambu-specific project encoding. The CA
 
 ## Current design choices
 
-There are currently **6 shapes x 3 number styles = 18 combinations**.
+There are currently **6 shapes x 4 number styles = 24 combinations**.
 
 Shapes:
 
@@ -94,6 +94,7 @@ Number styles:
 - **Recessed pips** — classic dice
 - **Bubbles** — smooth raised bumps
 - **Buttons** — broad flat bumps
+- **Paws** — chunky raised paw prints
 
 Every design keeps the same d6 rules:
 
@@ -121,7 +122,7 @@ Friendly labels are for the interactive UI. Stable ids remain available for scri
 ./dice --body mochi-soft --numbers bubbles --batch shape
 ./dice --body mochi-soft --numbers bubbles --batch numbers
 
-# Export all 18 raw combinations
+# Export all 24 raw combinations
 ./dice --all
 ```
 

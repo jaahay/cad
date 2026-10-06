@@ -26,6 +26,7 @@ EXPECTED_MARK_STYLES = (
     "pips",
     "bubbles",
     "buttons",
+    "paws",
 )
 
 
@@ -46,6 +47,7 @@ def test_project_contract_and_standard_d6_definition() -> None:
         "Recessed pips",
         "Bubbles",
         "Buttons",
+        "Paws",
     ]
     assert set(FACE_VALUES.values()) == set(range(1, 7))
     assert all(FACE_VALUES[a] + FACE_VALUES[b] == 7 for a, b in OPPOSITE_FACES)

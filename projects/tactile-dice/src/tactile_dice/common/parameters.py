@@ -13,6 +13,19 @@ BUTTON_RADIUS = 1.75
 BUTTON_HEIGHT = 0.65
 BUTTON_EMBED = 0.65
 
+# Raised paw-print count marks. Toe lobes overlap the main pad so one paw
+# remains one connected, countable tactile mark.
+PAW_PAD_RADIUS = 1.45
+PAW_PAD_HEIGHT = 0.72
+PAW_TOE_RADIUS = 0.72
+PAW_TOE_HEIGHT = 0.58
+PAW_TOE_OFFSETS = (
+    (-0.95, 1.05),
+    (-0.33, 1.38),
+    (0.33, 1.38),
+    (0.95, 1.05),
+)
+
 # Nested-steps body treatment.
 NESTED_OUTER_PANEL = 17.5
 NESTED_INNER_PANEL = 13.5
