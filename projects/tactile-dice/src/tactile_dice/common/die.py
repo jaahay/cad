@@ -2,11 +2,11 @@
 
 import cadquery as cq
 
-from .geometry import bubble_sphere, button_cylinder, pip_sphere
+from .geometry import bubble_sphere, button_cylinder, paw_mark, pip_sphere
 from .parameters import FACE_VALUES, OPPOSITE_FACES, PIP_OFFSET, PIPS
 
 
-MARK_STYLES = ("pips", "bubbles", "buttons")
+MARK_STYLES = ("pips", "bubbles", "buttons", "paws")
 
 
 def validate_definition() -> None:
@@ -47,6 +47,8 @@ def add_face_marks(
             body = body.fuse(bubble_sphere(face, u, v))
         elif mark_style == "buttons":
             body = body.fuse(button_cylinder(face, u, v))
+        elif mark_style == "paws":
+            body = body.fuse(paw_mark(face, u, v))
         else:
             raise AssertionError(mark_style)
 
