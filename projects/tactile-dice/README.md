@@ -2,7 +2,7 @@
 
 Parametric CAD for a family of tactile d6 designs intended for simple FDM printing and kid-friendly handling.
 
-The normal experience is intentionally simple: make one die, or create a prototype batch that changes one thing at a time.
+The normal experience is intentionally simple: make one die, or create a prototype batch that changes one playful trait at a time.
 
 ## Start here
 
@@ -33,41 +33,51 @@ What would you like to make?
 
 ### Make one die
 
-Choose a friendly shape and number style, confirm it, and the designer creates a neutral print handoff:
+Choose three traits:
+
+- **Shape**
+- **Number style**
+- **Tactile intensity** — Gentle, Standard, or Bold
+
+Standard is the original/default mark geometry. Gentle lowers the tactile relief or recess depth; Bold increases it. Intensity changes the marks, not the die's nominal width, height, or length.
+
+A neutral print handoff looks like:
 
 ```text
-build/tactile-dice/handoffs/mochi-soft--bubbles/
+build/tactile-dice/handoffs/mochi-soft--paws--bold/
   manifest.json
   step/die.step
   stl/die.stl
 ```
 
-The CLI tells you which STL to open in Bambu Studio and preserves the STEP file for editable CAD.
+The manifest records all three design traits. The CLI tells you which STL to open in Bambu Studio and preserves the STEP file for editable CAD.
 
 ### Prototype batch
 
-Choose a baseline die, then choose one axis to vary:
+Choose a baseline die, then choose exactly one trait to change:
 
-- **Shape** — keep the number style fixed and compare every shape.
-- **Number style** — keep the shape fixed and compare every number style.
+- **Shape** — keep number style and intensity fixed.
+- **Number style** — keep shape and intensity fixed.
+- **Tactile intensity** — compare Gentle, Standard, and Bold while keeping shape and number style fixed.
+- **Surprise one trait** — let the designer pick one of those three traits to explore.
 
-Candidate **A** is always the baseline. Every other candidate changes only the selected axis.
+Candidate **A** is always the baseline. Every other candidate changes only the selected trait.
 
 A batch looks like:
 
 ```text
-build/tactile-dice/prototype-batches/mochi-soft--bubbles--vary-shape/
+build/tactile-dice/prototype-batches/mochi-soft--paws--standard--vary-intensity/
   batch.json
   README.md
   candidates/
-    A-mochi-soft--bubbles/
+    A-mochi-soft--paws--standard/
       manifest.json
       step/die.step
       stl/die.stl
     B-.../
     C-.../
   plate/
-    A-mochi-soft--bubbles.stl
+    A-mochi-soft--paws--standard.stl
     B-....stl
     C-....stl
 ```
@@ -78,7 +88,7 @@ There is **no `.3mf` generation** and no Bambu-specific project encoding. The CA
 
 ## Current design choices
 
-There are currently **6 shapes x 4 number styles = 24 combinations**.
+There are currently **6 shapes x 4 number styles x 3 tactile intensities = 72 combinations**.
 
 Shapes:
 
@@ -96,6 +106,12 @@ Number styles:
 - **Buttons** — broad flat bumps
 - **Paws** — chunky raised paw prints
 
+Tactile intensity:
+
+- **Gentle** — low-profile tactile marks
+- **Standard** — the familiar default feel
+- **Bold** — extra-pronounced tactile marks
+
 Every design keeps the same d6 rules:
 
 - nominal body size: **24 x 24 x 24 mm**
@@ -112,33 +128,36 @@ Friendly labels are for the interactive UI. Stable ids remain available for scri
 # Show names, descriptions, and ids
 ./dice --list
 
-# Export raw CAD files for one combination
-./dice --body mochi-soft --numbers bubbles
+# Export one raw combination; omitted intensity defaults to Standard
+./dice --body mochi-soft --numbers paws
+./dice --body mochi-soft --numbers paws --intensity bold
 
 # Create one neutral print handoff
-./dice --body mochi-soft --numbers bubbles --handoff
+./dice --body mochi-soft --numbers paws --intensity bold --handoff
 
-# Create a baseline-first comparison batch
-./dice --body mochi-soft --numbers bubbles --batch shape
-./dice --body mochi-soft --numbers bubbles --batch numbers
+# Create baseline-first one-trait comparison batches
+./dice --body mochi-soft --numbers paws --batch shape
+./dice --body mochi-soft --numbers paws --batch numbers
+./dice --body mochi-soft --numbers paws --batch intensity
+./dice --body mochi-soft --numbers paws --batch surprise
 
-# Export all 24 raw combinations
+# Export all 72 raw combinations
 ./dice --all
 ```
 
 On Windows PowerShell, use `.\\dice` in place of `./dice`.
 
-Raw combinations remain under:
+Raw combinations are written under:
 
 ```text
-build/tactile-dice/designs/<shape-id>--<number-style-id>/
+build/tactile-dice/designs/<shape-id>--<number-style-id>--<intensity-id>/
   step/die.step
   stl/die.stl
 ```
 
 ## Repository blueprints
 
-The repository-facing blueprint model remains deliberately simpler than the interactive designer. Each blueprint is one underlying shape using classic recessed pips.
+The repository-facing blueprint model remains deliberately simpler than the interactive designer. Each blueprint is one underlying shape using classic recessed pips at Standard intensity.
 
 ```sh
 uv run python tools/export_project.py tactile-dice

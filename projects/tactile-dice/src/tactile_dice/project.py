@@ -6,6 +6,7 @@ from importlib import import_module
 
 import cadquery as cq
 
+from .common.design import DesignSpec, INTENSITY_SCALES, validate_intensity
 from .common.die import MARK_STYLES, finish_die, validate_definition
 
 
@@ -25,6 +26,12 @@ MARK_OPTIONS = {
     "paws": ("Paws", "Chunky raised paw prints."),
 }
 
+INTENSITY_OPTIONS = {
+    "gentle": ("Gentle", "Low-profile tactile marks."),
+    "standard": ("Standard", "The familiar default feel."),
+    "bold": ("Bold", "Extra-pronounced tactile marks."),
+}
+
 BLUEPRINT_MODULES = {
     "mochi-soft": "tactile_dice.blueprints.mochi",
     "spherocube": "tactile_dice.blueprints.spherocube",
@@ -40,17 +47,36 @@ def blueprints() -> tuple[str, ...]:
 
 
 def body_options() -> tuple[tuple[str, str, str], ...]:
-    return tuple((slug, label, description) for slug, (label, description) in BODY_OPTIONS.items())
+    return tuple(
+        (slug, label, description)
+        for slug, (label, description) in BODY_OPTIONS.items()
+    )
 
 
 def mark_options() -> tuple[tuple[str, str, str], ...]:
-    return tuple((slug, label, description) for slug, (label, description) in MARK_OPTIONS.items())
+    return tuple(
+        (slug, label, description)
+        for slug, (label, description) in MARK_OPTIONS.items()
+    )
+
+
+def intensity_options() -> tuple[tuple[str, str, str], ...]:
+    return tuple(
+        (slug, label, description)
+        for slug, (label, description) in INTENSITY_OPTIONS.items()
+    )
 
 
 def validate_project() -> None:
     validate_definition()
     if tuple(MARK_OPTIONS) != MARK_STYLES:
-        raise ValueError("Tactile Dice number-style metadata must match supported mark styles")
+        raise ValueError(
+            "Tactile Dice number-style metadata must match supported mark styles"
+        )
+    if tuple(INTENSITY_OPTIONS) != tuple(INTENSITY_SCALES):
+        raise ValueError(
+            "Tactile Dice intensity metadata must match supported intensity presets"
+        )
     if tuple(BODY_OPTIONS) != blueprints():
         raise ValueError("Tactile Dice shape metadata must match blueprints")
 
@@ -69,13 +95,30 @@ def build_body(body_name: str) -> cq.Shape:
     return body_builder()
 
 
-def build_design(body_name: str, mark_style: str) -> dict[str, cq.Shape]:
+def build_design_spec(spec: DesignSpec) -> dict[str, cq.Shape]:
     validate_project()
-    if mark_style not in MARK_OPTIONS:
-        raise ValueError(f"Unknown tactile-dice mark style: {mark_style}")
-    return {"die": finish_die(build_body(body_name), mark_style)}
+    if spec.body not in BODY_OPTIONS:
+        raise ValueError(f"Unknown tactile-dice body: {spec.body}")
+    if spec.number_style not in MARK_OPTIONS:
+        raise ValueError(f"Unknown tactile-dice mark style: {spec.number_style}")
+    validate_intensity(spec.intensity)
+    return {
+        "die": finish_die(
+            build_body(spec.body),
+            spec.number_style,
+            spec.intensity,
+        )
+    }
+
+
+def build_design(
+    body_name: str,
+    mark_style: str,
+    intensity: str = "standard",
+) -> dict[str, cq.Shape]:
+    return build_design_spec(DesignSpec(body_name, mark_style, intensity))
 
 
 def build(blueprint: str) -> dict[str, cq.Shape]:
-    """Repository blueprint builds use classic recessed pips."""
-    return build_design(blueprint, "pips")
+    """Repository blueprint builds use classic recessed pips at Standard intensity."""
+    return build_design(blueprint, "pips", "standard")

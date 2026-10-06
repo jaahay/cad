@@ -21,9 +21,11 @@ WORKFLOW_OPTIONS = (
     ("batch", "Prototype batch", "Compare one controlled change on one plate."),
 )
 
-BATCH_AXIS_OPTIONS = (
-    ("shape", "Shape", "Keep the number style fixed and compare shapes."),
-    ("numbers", "Number style", "Keep the shape fixed and compare number styles."),
+BATCH_TRAIT_OPTIONS = (
+    ("shape", "Shape", "Keep the other traits fixed and compare shapes."),
+    ("numbers", "Number style", "Keep the other traits fixed and compare number styles."),
+    ("intensity", "Tactile intensity", "Compare Gentle, Standard, and Bold."),
+    ("surprise", "Surprise one trait", "Pick one trait for us to explore."),
 )
 
 
@@ -46,16 +48,21 @@ def print_options(module) -> None:
     print()
     print("Shapes:")
     for slug, label, description in module.body_options():
-        print(f"  {label:<16} {description}  [id: {slug}]")
+        print(f"  {label:<18} {description}  [id: {slug}]")
     print()
     print("Number styles:")
     for slug, label, description in module.mark_options():
-        print(f"  {label:<16} {description}  [id: {slug}]")
+        print(f"  {label:<18} {description}  [id: {slug}]")
+    print()
+    print("Tactile intensity:")
+    for slug, label, description in module.intensity_options():
+        print(f"  {label:<18} {description}  [id: {slug}]")
     print()
     print("For scripted use:")
-    print("  ./dice --body mochi-soft --numbers bubbles")
-    print("  ./dice --body mochi-soft --numbers bubbles --handoff")
-    print("  ./dice --body mochi-soft --numbers bubbles --batch shape")
+    print("  ./dice --body mochi-soft --numbers paws --intensity bold")
+    print("  ./dice --body mochi-soft --numbers paws --intensity bold --handoff")
+    print("  ./dice --body mochi-soft --numbers paws --batch intensity")
+    print("  ./dice --body mochi-soft --numbers paws --batch surprise")
     print("  ./dice --all")
 
 
@@ -68,7 +75,7 @@ def choose(
     print()
     print(f"{title}:")
     for index, (_, label, description) in enumerate(options, start=1):
-        print(f"  {index}) {label:<18} {description}")
+        print(f"  {index}) {label:<20} {description}")
 
     commands = "B to go back, Q to quit" if allow_back else "Q to quit"
     while True:
@@ -84,12 +91,18 @@ def choose(
         print("That choice was not recognized.")
 
 
-def confirm_design(body_label: str, number_label: str, prompt: str) -> str:
+def confirm_design(
+    body_label: str,
+    number_label: str,
+    intensity_label: str,
+    prompt: str,
+) -> str:
     print()
     print("Your die:")
-    print(f"  Shape:   {body_label}")
-    print(f"  Numbers: {number_label}")
-    print("  Size:    24 mm")
+    print(f"  Shape:     {body_label}")
+    print(f"  Numbers:   {number_label}")
+    print(f"  Intensity: {intensity_label}")
+    print("  Size:      24 mm")
     print()
 
     while True:
@@ -113,45 +126,51 @@ def option_by_slug(
     raise ValueError(slug)
 
 
-def design_ref(module, body: str, number_style: str):
+def design_ref(module, body: str, number_style: str, intensity: str):
     api = handoff_api()
     body_label = option_by_slug(tuple(module.body_options()), body)[1]
     number_label = option_by_slug(tuple(module.mark_options()), number_style)[1]
+    intensity_label = option_by_slug(tuple(module.intensity_options()), intensity)[1]
     return api.DesignRef(
-        body=body,
-        number_style=number_style,
+        spec=module.DesignSpec(body, number_style, intensity),
         shape_label=body_label,
         number_label=number_label,
+        intensity_label=intensity_label,
     )
 
 
-def output_directory(body: str, number_style: str) -> Path:
+def output_directory(body: str, number_style: str, intensity: str) -> Path:
     return (
         repo_root()
         / "build"
         / PROJECT_SLUG
         / "designs"
-        / f"{body}--{number_style}"
+        / f"{body}--{number_style}--{intensity}"
     )
 
 
-def handoff_directory(body: str, number_style: str) -> Path:
+def handoff_directory(body: str, number_style: str, intensity: str) -> Path:
     return (
         repo_root()
         / "build"
         / PROJECT_SLUG
         / "handoffs"
-        / f"{body}--{number_style}"
+        / f"{body}--{number_style}--{intensity}"
     )
 
 
-def batch_directory(body: str, number_style: str, axis: str) -> Path:
+def batch_directory(
+    body: str,
+    number_style: str,
+    intensity: str,
+    trait: str,
+) -> Path:
     return (
         repo_root()
         / "build"
         / PROJECT_SLUG
         / "prototype-batches"
-        / f"{body}--{number_style}--vary-{axis}"
+        / f"{body}--{number_style}--{intensity}--vary-{trait}"
     )
 
 
@@ -159,18 +178,21 @@ def export_design(
     module,
     body: str,
     number_style: str,
+    intensity: str = "standard",
     *,
     announce: bool = True,
 ) -> Path:
-    parts = module.build_design(body, number_style)
-    output = output_directory(body, number_style)
+    parts = module.build_design(body, number_style, intensity)
+    output = output_directory(body, number_style, intensity)
     export_parts(parts, output)
 
     if announce:
-        body_label = option_by_slug(tuple(module.body_options()), body)[1]
-        number_label = option_by_slug(tuple(module.mark_options()), number_style)[1]
+        design = design_ref(module, body, number_style, intensity)
         print()
-        print(f"Created: {body_label} + {number_label}")
+        print(
+            f"Created: {design.shape_label} + {design.number_label} + "
+            f"{design.intensity_label}"
+        )
         print()
         print("STL:")
         print(f"  {(output / 'stl' / 'die.stl').relative_to(repo_root())}")
@@ -185,21 +207,25 @@ def create_handoff(
     module,
     body: str,
     number_style: str,
+    intensity: str = "standard",
     *,
     output: Path | None = None,
     announce: bool = True,
 ) -> Path:
     api = handoff_api()
-    design = design_ref(module, body, number_style)
-    destination = output or handoff_directory(body, number_style)
+    design = design_ref(module, body, number_style, intensity)
+    destination = output or handoff_directory(body, number_style, intensity)
 
-    parts = module.build_design(body, number_style)
+    parts = module.build_design(body, number_style, intensity)
     export_parts(parts, destination)
     api.write_handoff_manifest(destination, design)
 
     if announce:
         print()
-        print(f"Created print handoff: {design.shape_label} + {design.number_label}")
+        print(
+            f"Created print handoff: {design.shape_label} + "
+            f"{design.number_label} + {design.intensity_label}"
+        )
         print(f"  {destination.relative_to(repo_root())}")
         print()
         print("Open this file in Bambu Studio:")
@@ -218,31 +244,47 @@ def create_prototype_batch(
     module,
     body: str,
     number_style: str,
-    axis: str,
+    intensity: str,
+    requested_trait: str,
     *,
+    resolved_trait: str | None = None,
     announce: bool = True,
 ) -> Path:
     api = handoff_api()
     bodies = tuple(slug for slug, _, _ in module.body_options())
     number_styles = tuple(slug for slug, _, _ in module.mark_options())
-    specs = api.variation_specs(body, number_style, axis, bodies, number_styles)
-    baseline = design_ref(module, body, number_style)
-    output = batch_directory(body, number_style, axis)
+    intensities = tuple(slug for slug, _, _ in module.intensity_options())
+    baseline = design_ref(module, body, number_style, intensity)
+    varied_trait = resolved_trait or api.resolve_trait(requested_trait)
+    specs = api.variation_specs(
+        baseline.spec,
+        varied_trait,
+        bodies,
+        number_styles,
+        intensities,
+    )
+    output = batch_directory(body, number_style, intensity, varied_trait)
 
     if output.exists():
         shutil.rmtree(output)
 
     candidates = []
-    for index, (candidate_body, candidate_numbers) in enumerate(specs):
+    for index, candidate_spec in enumerate(specs):
         label = api.candidate_label(index)
-        design = design_ref(module, candidate_body, candidate_numbers)
+        design = design_ref(
+            module,
+            candidate_spec.body,
+            candidate_spec.number_style,
+            candidate_spec.intensity,
+        )
         candidate_name = f"{label}-{design.slug}"
         candidate_dir = output / "candidates" / candidate_name
 
         create_handoff(
             module,
-            candidate_body,
-            candidate_numbers,
+            candidate_spec.body,
+            candidate_spec.number_style,
+            candidate_spec.intensity,
             output=candidate_dir,
             announce=False,
         )
@@ -261,15 +303,22 @@ def create_prototype_batch(
             )
         )
 
-    api.write_batch_summary(output, baseline, axis, tuple(candidates))
+    api.write_batch_summary(
+        output,
+        baseline,
+        requested_trait,
+        varied_trait,
+        tuple(candidates),
+    )
 
     if announce:
-        axis_label = "shape" if axis == "shape" else "number style"
         print()
         print(
             f"Created prototype batch: {len(candidates)} candidates, "
-            f"varying {axis_label}."
+            f"varying {api.TRAIT_LABELS[varied_trait].lower()}."
         )
+        if requested_trait == "surprise":
+            print(f"Surprise chose: {api.TRAIT_LABELS[varied_trait]}")
         print(f"  {output.relative_to(repo_root())}")
         print()
         print("Drop all STL files from this folder into Bambu Studio:")
@@ -278,7 +327,9 @@ def create_prototype_batch(
         for candidate in candidates:
             print(
                 f"  {candidate.label}) "
-                f"{candidate.design.shape_label} + {candidate.design.number_label}"
+                f"{candidate.design.shape_label} + "
+                f"{candidate.design.number_label} + "
+                f"{candidate.design.intensity_label}"
             )
 
     return output
@@ -287,6 +338,7 @@ def create_prototype_batch(
 def run_single_interactive(module) -> str:
     bodies = tuple(module.body_options())
     number_styles = tuple(module.mark_options())
+    intensities = tuple(module.intensity_options())
 
     while True:
         body = choose("Choose a shape", bodies, allow_back=True)
@@ -306,25 +358,39 @@ def run_single_interactive(module) -> str:
             if number_style == BACK:
                 break
 
-            body_label = option_by_slug(bodies, body)[1]
-            number_label = option_by_slug(number_styles, number_style)[1]
-            action = confirm_design(
-                body_label,
-                number_label,
-                "Create print handoff?",
-            )
-            if action == "quit":
-                return "quit"
-            if action == "back":
-                continue
+            while True:
+                intensity = choose(
+                    "Choose the tactile intensity",
+                    intensities,
+                    allow_back=True,
+                )
+                if intensity is None:
+                    return "quit"
+                if intensity == BACK:
+                    break
 
-            create_handoff(module, body, number_style)
-            return "created"
+                body_label = option_by_slug(bodies, body)[1]
+                number_label = option_by_slug(number_styles, number_style)[1]
+                intensity_label = option_by_slug(intensities, intensity)[1]
+                action = confirm_design(
+                    body_label,
+                    number_label,
+                    intensity_label,
+                    "Create print handoff?",
+                )
+                if action == "quit":
+                    return "quit"
+                if action == "back":
+                    continue
+
+                create_handoff(module, body, number_style, intensity)
+                return "created"
 
 
 def run_batch_interactive(module) -> str:
     bodies = tuple(module.body_options())
     number_styles = tuple(module.mark_options())
+    intensities = tuple(module.intensity_options())
 
     while True:
         body = choose("Choose the baseline shape", bodies, allow_back=True)
@@ -345,50 +411,70 @@ def run_batch_interactive(module) -> str:
                 break
 
             while True:
-                axis = choose(
-                    "What should vary?",
-                    BATCH_AXIS_OPTIONS,
+                intensity = choose(
+                    "Choose the baseline tactile intensity",
+                    intensities,
                     allow_back=True,
                 )
-                if axis is None:
+                if intensity is None:
                     return "quit"
-                if axis == BACK:
+                if intensity == BACK:
                     break
 
-                api = handoff_api()
-                specs = api.variation_specs(
-                    body,
-                    number_style,
-                    axis,
-                    tuple(slug for slug, _, _ in bodies),
-                    tuple(slug for slug, _, _ in number_styles),
-                )
-                baseline_body_label = option_by_slug(bodies, body)[1]
-                baseline_number_label = option_by_slug(number_styles, number_style)[1]
+                while True:
+                    requested_trait = choose(
+                        "What should change?",
+                        BATCH_TRAIT_OPTIONS,
+                        allow_back=True,
+                    )
+                    if requested_trait is None:
+                        return "quit"
+                    if requested_trait == BACK:
+                        break
 
-                print()
-                print("Prototype batch:")
-                print(
-                    f"  Baseline: {baseline_body_label} + {baseline_number_label}"
-                )
-                print(
-                    "  Vary:     "
-                    + ("Shape" if axis == "shape" else "Number style")
-                )
-                print(f"  Pieces:   {len(specs)}")
+                    api = handoff_api()
+                    varied_trait = api.resolve_trait(requested_trait)
+                    baseline = design_ref(module, body, number_style, intensity)
+                    specs = api.variation_specs(
+                        baseline.spec,
+                        varied_trait,
+                        tuple(slug for slug, _, _ in bodies),
+                        tuple(slug for slug, _, _ in number_styles),
+                        tuple(slug for slug, _, _ in intensities),
+                    )
 
-                action = confirm_design(
-                    baseline_body_label,
-                    baseline_number_label,
-                    "Create prototype batch?",
-                )
-                if action == "quit":
-                    return "quit"
-                if action == "back":
-                    continue
+                    print()
+                    print("Prototype batch:")
+                    print(
+                        f"  Baseline: {baseline.shape_label} + "
+                        f"{baseline.number_label} + {baseline.intensity_label}"
+                    )
+                    if requested_trait == "surprise":
+                        print(f"  Surprise: {api.TRAIT_LABELS[varied_trait]}")
+                    else:
+                        print(f"  Change:   {api.TRAIT_LABELS[varied_trait]}")
+                    print(f"  Pieces:   {len(specs)}")
 
-                create_prototype_batch(module, body, number_style, axis)
-                return "created"
+                    action = confirm_design(
+                        baseline.shape_label,
+                        baseline.number_label,
+                        baseline.intensity_label,
+                        "Create prototype batch?",
+                    )
+                    if action == "quit":
+                        return "quit"
+                    if action == "back":
+                        continue
+
+                    create_prototype_batch(
+                        module,
+                        body,
+                        number_style,
+                        intensity,
+                        requested_trait,
+                        resolved_trait=varied_trait,
+                    )
+                    return "created"
 
 
 def run_interactive(module) -> int:
@@ -425,11 +511,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--body", help="Shape id to use")
     parser.add_argument("--numbers", help="Number-style id to use")
+    parser.add_argument("--intensity", help="Tactile-intensity id to use")
     parser.add_argument("--list", action="store_true", help="Show available choices")
     parser.add_argument(
         "--all",
         action="store_true",
-        help="Export every shape/number-style combination",
+        help="Export every shape/number-style/intensity combination",
     )
     parser.add_argument(
         "--handoff",
@@ -438,22 +525,31 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--batch",
-        choices=("shape", "numbers"),
-        help="Create a baseline-first prototype batch varying one axis",
+        choices=("shape", "numbers", "intensity", "surprise"),
+        help="Create a baseline-first prototype batch changing one trait",
     )
     args = parser.parse_args(argv)
 
     _, module = load_dice_project()
     bodies = tuple(module.body_options())
     number_styles = tuple(module.mark_options())
+    intensities = tuple(module.intensity_options())
     body_names = {slug for slug, _, _ in bodies}
     number_names = {slug for slug, _, _ in number_styles}
+    intensity_names = {slug for slug, _, _ in intensities}
 
     if args.list:
-        if args.body or args.numbers or args.all or args.handoff or args.batch:
+        if (
+            args.body
+            or args.numbers
+            or args.intensity
+            or args.all
+            or args.handoff
+            or args.batch
+        ):
             parser.error(
-                "--list cannot be combined with --body, --numbers, --all, "
-                "--handoff, or --batch"
+                "--list cannot be combined with --body, --numbers, --intensity, "
+                "--all, --handoff, or --batch"
             )
         print_options(module)
         return 0
@@ -468,24 +564,46 @@ def main(argv: list[str] | None = None) -> int:
             f"unknown number style {args.numbers!r}; choose from: "
             f"{', '.join(slug for slug, _, _ in number_styles)}"
         )
+    if args.intensity and args.intensity not in intensity_names:
+        parser.error(
+            f"unknown tactile intensity {args.intensity!r}; choose from: "
+            f"{', '.join(slug for slug, _, _ in intensities)}"
+        )
 
     if args.all:
-        if args.body or args.numbers or args.handoff or args.batch:
+        if args.body or args.numbers or args.intensity or args.handoff or args.batch:
             parser.error(
-                "--all cannot be combined with --body, --numbers, --handoff, or --batch"
+                "--all cannot be combined with --body, --numbers, --intensity, "
+                "--handoff, or --batch"
             )
         count = 0
         for body, _, _ in bodies:
             for number_style, _, _ in number_styles:
-                export_design(module, body, number_style, announce=False)
-                count += 1
-        print(f"Created {count} Tactile Dice designs under build/tactile-dice/designs.")
+                for intensity, _, _ in intensities:
+                    export_design(
+                        module,
+                        body,
+                        number_style,
+                        intensity,
+                        announce=False,
+                    )
+                    count += 1
+        print(
+            f"Created {count} Tactile Dice designs under "
+            "build/tactile-dice/designs."
+        )
         return 0
 
     if args.handoff and args.batch:
         parser.error("--handoff and --batch are separate output modes")
 
-    if not args.body and not args.numbers and not args.handoff and not args.batch:
+    if (
+        not args.body
+        and not args.numbers
+        and not args.intensity
+        and not args.handoff
+        and not args.batch
+    ):
         return run_interactive(module)
 
     interactive = sys.stdin.isatty()
@@ -513,12 +631,20 @@ def main(argv: list[str] | None = None) -> int:
     else:
         number_style = args.numbers
 
+    intensity = args.intensity or "standard"
+
     if args.batch:
-        create_prototype_batch(module, body, number_style, args.batch)
+        create_prototype_batch(
+            module,
+            body,
+            number_style,
+            intensity,
+            args.batch,
+        )
     elif args.handoff:
-        create_handoff(module, body, number_style)
+        create_handoff(module, body, number_style, intensity)
     else:
-        export_design(module, body, number_style)
+        export_design(module, body, number_style, intensity)
 
     return 0
 

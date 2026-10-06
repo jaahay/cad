@@ -141,8 +141,13 @@ def nested_steps_cube() -> cq.Shape:
     return body
 
 
-def pip_sphere(face: str, u: float, v: float) -> cq.Shape:
-    distance = HALF + PIP_SPHERE_RADIUS - PIP_DEPTH
+def pip_sphere(
+    face: str,
+    u: float,
+    v: float,
+    depth: float = PIP_DEPTH,
+) -> cq.Shape:
+    distance = HALF + PIP_SPHERE_RADIUS - depth
     center = face_point(face, u, v, distance)
     return wp_solid(cq.Workplane("XY").sphere(PIP_SPHERE_RADIUS).translate(center))
 
@@ -159,31 +164,47 @@ def raised_sphere(
     return wp_solid(cq.Workplane("XY").sphere(radius).translate(center))
 
 
-def bubble_sphere(face: str, u: float, v: float) -> cq.Shape:
-    return raised_sphere(face, u, v, BUBBLE_RADIUS, BUBBLE_HEIGHT)
+def bubble_sphere(
+    face: str,
+    u: float,
+    v: float,
+    height: float = BUBBLE_HEIGHT,
+) -> cq.Shape:
+    return raised_sphere(face, u, v, BUBBLE_RADIUS, height)
 
 
-def paw_mark(face: str, u: float, v: float) -> cq.Shape:
+def paw_mark(
+    face: str,
+    u: float,
+    v: float,
+    pad_height: float = PAW_PAD_HEIGHT,
+    toe_height: float = PAW_TOE_HEIGHT,
+) -> cq.Shape:
     """Create one connected raised paw: a broad pad with four toe lobes."""
-    mark = raised_sphere(face, u, v, PAW_PAD_RADIUS, PAW_PAD_HEIGHT)
+    mark = raised_sphere(face, u, v, PAW_PAD_RADIUS, pad_height)
     for offset_u, offset_v in PAW_TOE_OFFSETS:
         toe = raised_sphere(
             face,
             u + offset_u,
             v + offset_v,
             PAW_TOE_RADIUS,
-            PAW_TOE_HEIGHT,
+            toe_height,
         )
         mark = mark.fuse(toe)
     return mark
 
 
-def button_cylinder(face: str, u: float, v: float) -> cq.Shape:
+def button_cylinder(
+    face: str,
+    u: float,
+    v: float,
+    height: float = BUTTON_HEIGHT,
+) -> cq.Shape:
     origin = face_point(face, u, v, HALF - BUTTON_EMBED)
     normal = face_normal(face)
     return cq.Solid.makeCylinder(
         BUTTON_RADIUS,
-        BUTTON_EMBED + BUTTON_HEIGHT,
+        BUTTON_EMBED + height,
         cq.Vector(*origin),
         cq.Vector(*normal),
     )

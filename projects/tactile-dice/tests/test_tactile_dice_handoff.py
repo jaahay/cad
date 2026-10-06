@@ -1,14 +1,18 @@
 import json
+import random
 
 import pytest
 
+from tactile_dice.common.design import DesignSpec
 from tactile_dice.handoff import (
     BATCH_FORMAT,
     HANDOFF_FORMAT,
+    TRAITS,
     BatchCandidate,
     DesignRef,
     candidate_label,
     copy_plate_stl,
+    resolve_trait,
     variation_specs,
     write_batch_summary,
     write_handoff_manifest,
@@ -16,10 +20,10 @@ from tactile_dice.handoff import (
 
 
 BASELINE = DesignRef(
-    body="mochi-soft",
-    number_style="bubbles",
+    spec=DesignSpec("mochi-soft", "bubbles", "standard"),
     shape_label="Mochi",
     number_label="Bubbles",
+    intensity_label="Standard",
 )
 
 
@@ -32,44 +36,55 @@ def test_candidate_labels_scale_beyond_one_letter() -> None:
         candidate_label(-1)
 
 
-def test_variation_specs_are_baseline_first_and_change_one_axis() -> None:
+def test_variation_specs_are_baseline_first_and_change_one_trait() -> None:
     bodies = ("mochi-soft", "facet", "nested-steps")
     numbers = ("pips", "bubbles", "buttons")
+    intensities = ("gentle", "standard", "bold")
 
     shape_variants = variation_specs(
-        "mochi-soft",
-        "bubbles",
-        "shape",
-        bodies,
-        numbers,
+        BASELINE.spec, "shape", bodies, numbers, intensities
     )
     assert shape_variants == (
-        ("mochi-soft", "bubbles"),
-        ("facet", "bubbles"),
-        ("nested-steps", "bubbles"),
+        DesignSpec("mochi-soft", "bubbles", "standard"),
+        DesignSpec("facet", "bubbles", "standard"),
+        DesignSpec("nested-steps", "bubbles", "standard"),
     )
 
     number_variants = variation_specs(
-        "mochi-soft",
-        "bubbles",
-        "numbers",
-        bodies,
-        numbers,
+        BASELINE.spec, "numbers", bodies, numbers, intensities
     )
     assert number_variants == (
-        ("mochi-soft", "bubbles"),
-        ("mochi-soft", "pips"),
-        ("mochi-soft", "buttons"),
+        DesignSpec("mochi-soft", "bubbles", "standard"),
+        DesignSpec("mochi-soft", "pips", "standard"),
+        DesignSpec("mochi-soft", "buttons", "standard"),
+    )
+
+    intensity_variants = variation_specs(
+        BASELINE.spec, "intensity", bodies, numbers, intensities
+    )
+    assert intensity_variants == (
+        DesignSpec("mochi-soft", "bubbles", "standard"),
+        DesignSpec("mochi-soft", "bubbles", "gentle"),
+        DesignSpec("mochi-soft", "bubbles", "bold"),
     )
 
 
-def test_single_handoff_manifest_is_neutral_and_points_at_exports(tmp_path) -> None:
+def test_surprise_trait_can_be_reproduced_with_a_seeded_rng() -> None:
+    first = resolve_trait("surprise", random.Random(27))
+    second = resolve_trait("surprise", random.Random(27))
+
+    assert first == second
+    assert first in TRAITS
+
+
+def test_single_handoff_manifest_records_intensity_and_is_neutral(tmp_path) -> None:
     manifest_path = write_handoff_manifest(tmp_path, BASELINE)
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     assert payload["format"] == HANDOFF_FORMAT
     assert payload["design"]["body"] == "mochi-soft"
     assert payload["design"]["number_style"] == "bubbles"
+    assert payload["design"]["intensity"] == "standard"
     assert payload["files"] == {
         "stl": "stl/die.stl",
         "step": "step/die.step",
@@ -80,7 +95,7 @@ def test_single_handoff_manifest_is_neutral_and_points_at_exports(tmp_path) -> N
 
 
 def test_batch_summary_and_plate_copy_preserve_candidate_identity(tmp_path) -> None:
-    handoff_dir = tmp_path / "candidates" / "A-mochi-soft--bubbles"
+    handoff_dir = tmp_path / "candidates" / f"A-{BASELINE.slug}"
     source = handoff_dir / "stl" / "die.stl"
     source.parent.mkdir(parents=True)
     source.write_bytes(b"fake-stl")
@@ -89,21 +104,26 @@ def test_batch_summary_and_plate_copy_preserve_candidate_identity(tmp_path) -> N
     candidate = BatchCandidate(
         label="A",
         design=BASELINE,
-        handoff_dir="candidates/A-mochi-soft--bubbles",
+        handoff_dir=f"candidates/A-{BASELINE.slug}",
         plate_stl=f"plate/{plate_stl.name}",
     )
 
     batch_path, readme_path = write_batch_summary(
         tmp_path,
         BASELINE,
-        "shape",
+        "surprise",
+        "intensity",
         (candidate,),
     )
     payload = json.loads(batch_path.read_text(encoding="utf-8"))
 
     assert payload["format"] == BATCH_FORMAT
-    assert payload["varied_axis"] == "shape"
+    assert payload["requested_trait"] == "surprise"
+    assert payload["varied_trait"] == "intensity"
     assert payload["candidates"][0]["label"] == "A"
+    assert payload["candidates"][0]["design"]["intensity"] == "standard"
     assert plate_stl.read_bytes() == b"fake-stl"
-    assert "Mochi" in readme_path.read_text(encoding="utf-8")
-    assert ".3mf" not in readme_path.read_text(encoding="utf-8")
+    readme = readme_path.read_text(encoding="utf-8")
+    assert "Tactile intensity" in readme
+    assert "Surprise one trait" in readme
+    assert ".3mf" not in readme

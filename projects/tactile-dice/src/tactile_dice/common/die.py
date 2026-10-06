@@ -2,8 +2,19 @@
 
 import cadquery as cq
 
+from .design import intensity_scale, validate_intensity
 from .geometry import bubble_sphere, button_cylinder, paw_mark, pip_sphere
-from .parameters import FACE_VALUES, OPPOSITE_FACES, PIP_OFFSET, PIPS
+from .parameters import (
+    BUBBLE_HEIGHT,
+    BUTTON_HEIGHT,
+    FACE_VALUES,
+    OPPOSITE_FACES,
+    PAW_PAD_HEIGHT,
+    PAW_TOE_HEIGHT,
+    PIP_DEPTH,
+    PIP_OFFSET,
+    PIPS,
+)
 
 
 MARK_STYLES = ("pips", "bubbles", "buttons", "paws")
@@ -36,29 +47,48 @@ def add_face_marks(
     face: str,
     value: int,
     mark_style: str,
+    tactile_scale: float,
 ) -> cq.Shape:
     for horizontal, vertical in PIPS[value]:
         u = horizontal * PIP_OFFSET
         v = vertical * PIP_OFFSET
 
         if mark_style == "pips":
-            body = body.cut(pip_sphere(face, u, v))
+            body = body.cut(pip_sphere(face, u, v, PIP_DEPTH * tactile_scale))
         elif mark_style == "bubbles":
-            body = body.fuse(bubble_sphere(face, u, v))
+            body = body.fuse(
+                bubble_sphere(face, u, v, BUBBLE_HEIGHT * tactile_scale)
+            )
         elif mark_style == "buttons":
-            body = body.fuse(button_cylinder(face, u, v))
+            body = body.fuse(
+                button_cylinder(face, u, v, BUTTON_HEIGHT * tactile_scale)
+            )
         elif mark_style == "paws":
-            body = body.fuse(paw_mark(face, u, v))
+            body = body.fuse(
+                paw_mark(
+                    face,
+                    u,
+                    v,
+                    PAW_PAD_HEIGHT * tactile_scale,
+                    PAW_TOE_HEIGHT * tactile_scale,
+                )
+            )
         else:
             raise AssertionError(mark_style)
 
     return body
 
 
-def finish_die(body: cq.Shape, mark_style: str = "pips") -> cq.Shape:
+def finish_die(
+    body: cq.Shape,
+    mark_style: str = "pips",
+    intensity: str = "standard",
+) -> cq.Shape:
     validate_definition()
     validate_mark_style(mark_style)
+    validate_intensity(intensity)
+    scale = intensity_scale(intensity)
 
     for face, value in FACE_VALUES.items():
-        body = add_face_marks(body, face, value, mark_style)
+        body = add_face_marks(body, face, value, mark_style, scale)
     return body
