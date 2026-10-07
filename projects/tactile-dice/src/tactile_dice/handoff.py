@@ -10,10 +10,11 @@ import shutil
 
 from .common.design import DesignSpec
 from .common.parameters import SIZE
+from .manufacturing import showcase_manifest
 
 
-HANDOFF_FORMAT = "tactile-dice-handoff/v2"
-BATCH_FORMAT = "tactile-dice-prototype-batch/v2"
+HANDOFF_FORMAT = "tactile-dice-handoff/v3"
+BATCH_FORMAT = "tactile-dice-prototype-batch/v3"
 TRAITS = ("shape", "numbers", "intensity")
 TRAIT_LABELS = {
     "shape": "Shape",
@@ -134,10 +135,13 @@ def write_handoff_manifest(output: Path, design: DesignRef) -> Path:
         "files": {
             "stl": "stl/die.stl",
             "step": "step/die.step",
+            "print_stl": "print/showcase.stl",
         },
         "manufacturing": {
             "nominal_body_size_mm": SIZE,
             "handoff": "neutral",
+            "recommended_print_file": "print/showcase.stl",
+            "showcase": showcase_manifest(),
             "slicer_project_generated": False,
         },
     }

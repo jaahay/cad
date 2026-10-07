@@ -88,8 +88,15 @@ def test_single_handoff_manifest_records_intensity_and_is_neutral(tmp_path) -> N
     assert payload["files"] == {
         "stl": "stl/die.stl",
         "step": "step/die.step",
+        "print_stl": "print/showcase.stl",
     }
     assert payload["manufacturing"]["handoff"] == "neutral"
+    assert payload["manufacturing"]["recommended_print_file"] == "print/showcase.stl"
+    assert payload["manufacturing"]["showcase"]["downward_edge"] == [1, 2]
+    assert (
+        payload["manufacturing"]["showcase"]["support"]["kind"]
+        == "integrated-breakaway-rail"
+    )
     assert payload["manufacturing"]["slicer_project_generated"] is False
     assert ".3mf" not in manifest_path.read_text(encoding="utf-8")
 
