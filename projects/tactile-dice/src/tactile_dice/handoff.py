@@ -13,7 +13,7 @@ from .common.parameters import SIZE
 from .manufacturing import showcase_manifest
 
 
-HANDOFF_FORMAT = "tactile-dice-handoff/v3"
+HANDOFF_FORMAT = "tactile-dice-handoff/v4"
 BATCH_FORMAT = "tactile-dice-prototype-batch/v3"
 TRAITS = ("shape", "numbers", "intensity")
 TRAIT_LABELS = {
@@ -142,6 +142,20 @@ def write_handoff_manifest(output: Path, design: DesignRef) -> Path:
             "handoff": "neutral",
             "recommended_print_file": "print/showcase.stl",
             "showcase": showcase_manifest(),
+            "post_processing": {
+                "sanding": "none-by-default",
+                "support_removal": (
+                    "snap-or-cut breakaway rail; spot-deburr contacted edge only if needed"
+                ),
+                "painting": {
+                    "optional": True,
+                    "recommended_experiments": [
+                        "unpainted",
+                        "recessed-paint-fill",
+                        "raised-detail-accent",
+                    ],
+                },
+            },
             "slicer_project_generated": False,
         },
     }

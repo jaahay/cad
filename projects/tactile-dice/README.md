@@ -55,6 +55,18 @@ The manifest records all three design traits. The canonical STEP/STL stay unchan
 
 The support is deliberately a manufacturing derivative, not part of the canonical die. Snap/cut it off after printing and lightly deburr the contacted edge if needed.
 
+### Post-processing and painting
+
+The default target is **usable straight from the printer**. Sanding is not part of the normal workflow. After removing the showcase support, only spot-deburr the contacted edge if it is actually rough; do not sand whole faces or tactile marks just to make the design work.
+
+Painting is optional and should stay similarly low-friction. For the next production run, useful comparisons are:
+
+- **Unpainted** — the control; judge the print as-produced.
+- **Recessed paint fill** — dab acrylic paint into recessed pips/grooves and wipe the surrounding face clean.
+- **Raised-detail accent** — lightly dry-brush or otherwise accent paws, bubbles, terraces, or other raised features.
+
+No primer/full-body sanding pipeline is assumed. Future CAD should prefer clean support removal, printable surfaces, and features that can accept selective paint without depending on hand finishing.
+
 ### Prototype batch
 
 Choose a baseline die, then choose exactly one trait to change:
