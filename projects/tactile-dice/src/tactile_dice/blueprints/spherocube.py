@@ -2,12 +2,12 @@
 
 import cadquery as cq
 
+from ..common.body import build_preset_body
 from ..common.die import finish_die
-from ..common.geometry import rounded_cube
 
 
 def body() -> cq.Shape:
-    return rounded_cube(5.8)
+    return build_preset_body("spherocube")
 
 
 def build() -> dict[str, cq.Shape]:

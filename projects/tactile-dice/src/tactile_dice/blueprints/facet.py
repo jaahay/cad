@@ -2,12 +2,12 @@
 
 import cadquery as cq
 
+from ..common.body import build_preset_body
 from ..common.die import finish_die
-from ..common.geometry import chamfered_cube
 
 
 def body() -> cq.Shape:
-    return chamfered_cube(2.4)
+    return build_preset_body("facet")
 
 
 def build() -> dict[str, cq.Shape]:

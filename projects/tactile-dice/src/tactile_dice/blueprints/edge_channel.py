@@ -2,12 +2,12 @@
 
 import cadquery as cq
 
+from ..common.body import build_preset_body
 from ..common.die import finish_die
-from ..common.geometry import edge_channel_cube
 
 
 def body() -> cq.Shape:
-    return edge_channel_cube()
+    return build_preset_body("edge-channel")
 
 
 def build() -> dict[str, cq.Shape]:
