@@ -42,9 +42,9 @@ Start from one of the six familiar presets, or choose **Build your own** and com
 - **Number style** — Recessed pips, Bubbles, Buttons, or Paws.
 - **Tactile intensity** — Gentle, Standard, or Bold.
 
-The CAD-facing dimensions behind those choices stay internal. For example, users choose **Channels**, not a groove width in millimeters. Compatibility is likewise handled by the grammar: corner pockets are hidden for the very round Mochi and Spherocube bases because they would add little useful geometry.
+The CAD-facing dimensions behind those choices stay internal. For example, users choose **Channels**, not a groove width in millimeters. Compatibility is likewise handled by the grammar: **Pockets** are hidden for the very round Mochi and Spherocube bases because they would add little useful geometry, and **Nested Steps** are hidden there because the current panel proportions would shrink the nominal 24 mm envelope.
 
-The first grammar exposes **24 safe body configurations × 4 number styles × 3 intensities = 288 build-your-own designs**. Standard intensity remains the original/default mark geometry.
+The first grammar exposes **20 safe body configurations × 4 number styles × 3 intensities = 240 build-your-own designs**. Standard intensity remains the original/default mark geometry.
 
 A neutral print handoff looks like:
 
@@ -174,7 +174,7 @@ Friendly labels are for the interactive UI. Stable ids remain available for scri
 ./dice --body mochi-soft --numbers paws --batch intensity
 ./dice --body mochi-soft --numbers paws --batch surprise
 
-# Export all 288 public build-your-own combinations
+# Export all 240 public build-your-own combinations
 ./dice --all
 ```
 

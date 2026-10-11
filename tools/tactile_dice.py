@@ -153,7 +153,7 @@ def choose_custom_body(module) -> str | None:
         elif trait == "corner":
             options = tuple(module.corner_options(selected["base"]))
         elif trait == "face":
-            options = tuple(module.face_options())
+            options = tuple(module.face_options(selected["base"]))
         else:
             raise AssertionError(trait)
 

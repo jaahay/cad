@@ -104,16 +104,25 @@ def test_existing_named_bodies_are_presets_on_the_composable_engine() -> None:
 
 def test_public_body_grammar_is_bounded_and_meaningful() -> None:
     specs = public_custom_body_specs()
-    assert len(specs) == 24
+    assert len(specs) == 20
     assert all(spec.base in {"balanced", "mochi", "spherocube", "faceted"} for spec in specs)
     assert all(
         not (spec.corner == "pockets" and spec.base in {"mochi", "spherocube"})
+        for spec in specs
+    )
+    assert all(
+        not (spec.face == "nested" and spec.base in {"mochi", "spherocube"})
         for spec in specs
     )
     assert tuple(slug for slug, _, _ in corner_options("mochi")) == ("plain",)
     assert tuple(slug for slug, _, _ in corner_options("balanced")) == (
         "plain",
         "pockets",
+    )
+    assert tuple(slug for slug, _, _ in face_options("mochi")) == ("plain",)
+    assert tuple(slug for slug, _, _ in face_options("balanced")) == (
+        "plain",
+        "nested",
     )
 
 

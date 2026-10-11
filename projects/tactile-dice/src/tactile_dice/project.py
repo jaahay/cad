@@ -90,11 +90,14 @@ def corner_options(base: str | None = None) -> tuple[tuple[str, str, str], ...]:
     return options
 
 
-def face_options() -> tuple[tuple[str, str, str], ...]:
-    return tuple(
+def face_options(base: str | None = None) -> tuple[tuple[str, str, str], ...]:
+    options = tuple(
         (slug, label, description)
         for slug, (label, description) in FACE_OPTIONS.items()
     )
+    if base in {"mochi", "spherocube"}:
+        return tuple(option for option in options if option[0] == "plain")
+    return options
 
 
 def mark_options() -> tuple[tuple[str, str, str], ...]:

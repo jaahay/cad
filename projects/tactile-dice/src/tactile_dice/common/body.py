@@ -106,6 +106,14 @@ def validate_body_spec(spec: BodySpec, *, public: bool = False) -> None:
             raise ValueError(
                 f"{spec.base} is too rounded for a meaningful pocket treatment"
             )
+        # The existing nested panel dimensions reach beyond the flat center of
+        # the softest bodies and reduce their nominal 24 mm envelope. Keep the
+        # treatment off those bases rather than silently retuning its CAD
+        # dimensions per combination.
+        if spec.face == "nested" and spec.base in {"mochi", "spherocube"}:
+            raise ValueError(
+                f"{spec.base} is too rounded for the current nested face treatment"
+            )
 
 
 def is_public_body_spec(spec: BodySpec) -> bool:
