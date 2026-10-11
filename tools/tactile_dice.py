@@ -9,7 +9,9 @@ from pathlib import Path
 import shutil
 import sys
 
-from export_project import export_parts, repo_root
+from cadquery import exporters
+
+from export_project import export_parts, normalize_stl, repo_root
 from project_registry import discover_projects, load_project_module
 
 
@@ -41,6 +43,27 @@ def load_dice_project():
 def handoff_api():
     """Load project-specific handoff helpers after project discovery sets sys.path."""
     return import_module("tactile_dice.handoff")
+
+
+def manufacturing_api():
+    """Load project-specific manufacturing helpers after project discovery."""
+    return import_module("tactile_dice.manufacturing")
+
+
+def export_showcase_stl(die, destination: Path) -> Path:
+    """Export the derived edge-down manufacturing model as one normalized STL."""
+    model = manufacturing_api().build_showcase_print(die)
+    print_dir = destination / "print"
+    print_dir.mkdir(parents=True, exist_ok=True)
+    path = print_dir / "showcase.stl"
+    exporters.export(
+        model,
+        str(path),
+        tolerance=0.03,
+        angularTolerance=0.08,
+    )
+    normalize_stl(path)
+    return path
 
 
 def print_options(module) -> None:
@@ -218,6 +241,7 @@ def create_handoff(
 
     parts = module.build_design(body, number_style, intensity)
     export_parts(parts, destination)
+    showcase_path = export_showcase_stl(parts["die"], destination)
     api.write_handoff_manifest(destination, design)
 
     if announce:
@@ -228,7 +252,10 @@ def create_handoff(
         )
         print(f"  {destination.relative_to(repo_root())}")
         print()
-        print("Open this file in Bambu Studio:")
+        print("Recommended print STL (1-2 edge down + breakaway rail):")
+        print(f"  {showcase_path.relative_to(repo_root())}")
+        print()
+        print("Canonical STL:")
         print(f"  {(destination / 'stl' / 'die.stl').relative_to(repo_root())}")
         print()
         print("Editable CAD:")
@@ -289,7 +316,7 @@ def create_prototype_batch(
             announce=False,
         )
         plate_stl = api.copy_plate_stl(
-            candidate_dir / "stl" / "die.stl",
+            candidate_dir / "print" / "showcase.stl",
             output / "plate",
             label,
             design,

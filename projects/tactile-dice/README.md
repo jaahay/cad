@@ -48,9 +48,24 @@ build/tactile-dice/handoffs/mochi-soft--paws--bold/
   manifest.json
   step/die.step
   stl/die.stl
+  print/showcase.stl
 ```
 
-The manifest records all three design traits. The CLI tells you which STL to open in Bambu Studio and preserves the STEP file for editable CAD.
+The manifest records all three design traits. The canonical STEP/STL stay unchanged. The recommended print file is `print/showcase.stl`: the die is rotated onto the shared **1–2 edge** and attached to a narrow sacrificial rail on a small bed foot, so no numbered face is used as the build-plate face.
+
+The support is deliberately a manufacturing derivative, not part of the canonical die. Snap/cut it off after printing and lightly deburr the contacted edge if needed.
+
+### Post-processing and painting
+
+The default target is **usable straight from the printer**. Sanding is not part of the normal workflow. After removing the showcase support, only spot-deburr the contacted edge if it is actually rough; do not sand whole faces or tactile marks just to make the design work.
+
+Painting is optional and should stay similarly low-friction. For the next production run, useful comparisons are:
+
+- **Unpainted** — the control; judge the print as-produced.
+- **Recessed paint fill** — dab acrylic paint into recessed pips/grooves and wipe the surrounding face clean.
+- **Raised-detail accent** — lightly dry-brush or otherwise accent paws, bubbles, terraces, or other raised features.
+
+No primer/full-body sanding pipeline is assumed. Future CAD should prefer clean support removal, printable surfaces, and features that can accept selective paint without depending on hand finishing.
 
 ### Prototype batch
 
@@ -82,9 +97,18 @@ build/tactile-dice/prototype-batches/mochi-soft--paws--standard--vary-intensity/
     C-....stl
 ```
 
-The `plate/` directory is intentionally flat: select all of its STLs and open or drag them into Bambu Studio together.
+The `plate/` directory is intentionally flat: select all of its STLs and open or drag them into Bambu Studio together. Batch plate files use the same edge-down showcase geometry so the next comparison run exercises the support/orientation strategy consistently.
 
 There is **no `.3mf` generation** and no Bambu-specific project encoding. The CAD workspace owns geometry and neutral manufacturing handoff; the slicer owns slicing and plate state.
+
+## What the files mean
+
+- **CadQuery `.py` source** — the parametric CAD definition and the actual design authority in this repository.
+- **STEP (`.step` / `.stp`)** — precise solid/B-rep interchange geometry; appropriate when another CAD program needs an editable solid.
+- **STL (`.stl`)** — a triangulated surface mesh for slicing/printing. `stl/die.stl` is the canonical die mesh.
+- **`print/showcase.stl`** — a derived STL for manufacturing: same die geometry, rotated and carrying the sacrificial support base.
+
+Other formats exist (OBJ for general meshes, DXF/SVG for 2D geometry, IGES as older CAD interchange), but this project intentionally needs only source + STEP + STL for this workflow.
 
 ## Current design choices
 

@@ -4,6 +4,11 @@ import pytest
 
 from tactile_dice.common.design import INTENSITY_SCALES
 from tactile_dice.common.parameters import FACE_VALUES, OPPOSITE_FACES, PIPS, SIZE
+from tactile_dice.manufacturing import (
+    build_showcase_print,
+    canonical_one_two_edge_midpoint,
+    rotate_showcase_point,
+)
 from tactile_dice.project import (
     blueprints,
     body_options,
@@ -105,6 +110,25 @@ def test_every_body_mark_style_and_intensity_is_a_valid_single_die(
         assert all(length == pytest.approx(SIZE, abs=0.01) for length in extents)
     else:
         assert all(SIZE < length < SIZE + 2.1 for length in extents)
+
+    showcase = build_showcase_print(die)
+    assert showcase.isValid()
+    assert len(showcase.Solids()) == 1
+    showcase_box = showcase.BoundingBox()
+    assert showcase_box.zmin == pytest.approx(0.0, abs=0.01)
+    assert showcase_box.zlen > SIZE
+
+
+def test_showcase_rotation_puts_the_one_two_edge_down() -> None:
+    edge = rotate_showcase_point(canonical_one_two_edge_midpoint())
+    opposite_edge = rotate_showcase_point(
+        tuple(-coordinate for coordinate in canonical_one_two_edge_midpoint())
+    )
+
+    assert edge[1] == pytest.approx(0.0, abs=1e-9)
+    assert edge[2] < 0.0
+    assert opposite_edge[1] == pytest.approx(0.0, abs=1e-9)
+    assert opposite_edge[2] > 0.0
 
 
 @pytest.mark.parametrize("mark_style", EXPECTED_MARK_STYLES)
