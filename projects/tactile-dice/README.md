@@ -33,13 +33,18 @@ What would you like to make?
 
 ### Make one die
 
-Choose three traits:
+Start from one of the six familiar presets, or choose **Build your own** and compose the body from semantic traits:
 
-- **Shape**
-- **Number style**
-- **Tactile intensity** — Gentle, Standard, or Bold
+- **Base character** — Balanced, Mochi, Spherocube, or Faceted.
+- **Edge treatment** — Plain or Channels.
+- **Corner treatment** — Plain or Pockets.
+- **Face treatment** — Plain or Nested Steps.
+- **Number style** — Recessed pips, Bubbles, Buttons, or Paws.
+- **Tactile intensity** — Gentle, Standard, or Bold.
 
-Standard is the original/default mark geometry. Gentle lowers the tactile relief or recess depth; Bold increases it. Intensity changes the marks, not the die's nominal width, height, or length.
+The CAD-facing dimensions behind those choices stay internal. For example, users choose **Channels**, not a groove width in millimeters. Compatibility is likewise handled by the grammar: corner pockets are hidden for the very round Mochi and Spherocube bases because they would add little useful geometry.
+
+The first grammar exposes **24 safe body configurations × 4 number styles × 3 intensities = 288 build-your-own designs**. Standard intensity remains the original/default mark geometry.
 
 A neutral print handoff looks like:
 
@@ -112,9 +117,7 @@ Other formats exist (OBJ for general meshes, DXF/SVG for 2D geometry, IGES as ol
 
 ## Current design choices
 
-There are currently **6 shapes x 4 number styles x 3 tactile intensities = 72 combinations**.
-
-Shapes:
+The six original bodies remain available as **presets**:
 
 - **Mochi** — soft and rounded
 - **Spherocube** — very round and smooth
@@ -122,6 +125,8 @@ Shapes:
 - **Edge Channels** — grooves around the edges
 - **Corner Pockets** — scooped corners
 - **Nested Steps** — layered tactile faces
+
+Build-your-own bodies use the bounded Base + Edge + Corner + Face grammar above. Raw radii, groove depths, pocket dimensions, and panel depths are deliberately not user-facing controls.
 
 Number styles:
 
@@ -152,9 +157,13 @@ Friendly labels are for the interactive UI. Stable ids remain available for scri
 # Show names, descriptions, and ids
 ./dice --list
 
-# Export one raw combination; omitted intensity defaults to Standard
+# Export one preset combination; omitted intensity defaults to Standard
 ./dice --body mochi-soft --numbers paws
 ./dice --body mochi-soft --numbers paws --intensity bold
+
+# Compose a body without exposing CAD dimensions
+./dice --base balanced --edge channels --face nested --numbers paws
+./dice --base faceted --corner pockets --numbers pips --intensity bold
 
 # Create one neutral print handoff
 ./dice --body mochi-soft --numbers paws --intensity bold --handoff
@@ -165,7 +174,7 @@ Friendly labels are for the interactive UI. Stable ids remain available for scri
 ./dice --body mochi-soft --numbers paws --batch intensity
 ./dice --body mochi-soft --numbers paws --batch surprise
 
-# Export all 72 raw combinations
+# Export all 288 public build-your-own combinations
 ./dice --all
 ```
 
@@ -174,10 +183,12 @@ On Windows PowerShell, use `.\\dice` in place of `./dice`.
 Raw combinations are written under:
 
 ```text
-build/tactile-dice/designs/<shape-id>--<number-style-id>--<intensity-id>/
+build/tactile-dice/designs/<body-id>--<number-style-id>--<intensity-id>/
   step/die.step
   stl/die.stl
 ```
+
+Prototype batches still use named preset bodies in this incremental grammar step; component-level Base/Edge/Corner/Face mutation is the next step on issue #16.
 
 ## Repository blueprints
 
