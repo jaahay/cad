@@ -23,6 +23,11 @@ WORKFLOW_OPTIONS = (
     ("batch", "Prototype batch", "Compare one controlled change on one plate."),
 )
 
+BODY_SOURCE_OPTIONS = (
+    ("preset", "Start from a preset", "Pick one of the familiar named bodies."),
+    ("custom", "Build your own", "Compose base, edge, corner, and face traits."),
+)
+
 BATCH_TRAIT_OPTIONS = (
     ("shape", "Shape", "Keep the other traits fixed and compare shapes."),
     ("numbers", "Number style", "Keep the other traits fixed and compare number styles."),
@@ -69,9 +74,20 @@ def export_showcase_stl(die, destination: Path) -> Path:
 def print_options(module) -> None:
     print("Tactile Dice")
     print()
-    print("Shapes:")
+    print("Presets:")
     for slug, label, description in module.body_options():
         print(f"  {label:<18} {description}  [id: {slug}]")
+    print()
+    print("Build-your-own traits:")
+    for heading, options in (
+        ("Base character", module.base_options()),
+        ("Edge treatment", module.edge_options()),
+        ("Corner treatment", module.corner_options()),
+        ("Face treatment", module.face_options()),
+    ):
+        print(f"  {heading}:")
+        for slug, label, description in options:
+            print(f"    {label:<18} {description}  [id: {slug}]")
     print()
     print("Number styles:")
     for slug, label, description in module.mark_options():
@@ -83,6 +99,8 @@ def print_options(module) -> None:
     print()
     print("For scripted use:")
     print("  ./dice --body mochi-soft --numbers paws --intensity bold")
+    print("  ./dice --base balanced --edge channels --face nested --numbers paws")
+    print("  ./dice --base faceted --corner pockets --numbers pips --handoff")
     print("  ./dice --body mochi-soft --numbers paws --intensity bold --handoff")
     print("  ./dice --body mochi-soft --numbers paws --batch intensity")
     print("  ./dice --body mochi-soft --numbers paws --batch surprise")
@@ -112,6 +130,75 @@ def choose(
             if 1 <= index <= len(options):
                 return options[index - 1][0]
         print("That choice was not recognized.")
+
+
+def choose_custom_body(module) -> str | None:
+    """Interactively compose one public body specification."""
+    steps = ("base", "edge", "corner", "face")
+    titles = {
+        "base": "Choose a base character",
+        "edge": "Choose an edge treatment",
+        "corner": "Choose a corner treatment",
+        "face": "Choose a face treatment",
+    }
+    selected: dict[str, str] = {}
+    index = 0
+
+    while index < len(steps):
+        trait = steps[index]
+        if trait == "base":
+            options = tuple(module.base_options())
+        elif trait == "edge":
+            options = tuple(module.edge_options())
+        elif trait == "corner":
+            options = tuple(module.corner_options(selected["base"]))
+        elif trait == "face":
+            options = tuple(module.face_options(selected["base"]))
+        else:
+            raise AssertionError(trait)
+
+        choice = choose(titles[trait], options, allow_back=True)
+        if choice is None:
+            return None
+        if choice == BACK:
+            if index == 0:
+                return BACK
+            index -= 1
+            for later_trait in steps[index:]:
+                selected.pop(later_trait, None)
+            continue
+
+        selected[trait] = choice
+        index += 1
+
+    return module.make_custom_body_slug(
+        selected["base"],
+        selected["edge"],
+        selected["corner"],
+        selected["face"],
+    )
+
+
+def choose_single_body(module) -> str | None:
+    while True:
+        source = choose("Choose how to start", BODY_SOURCE_OPTIONS, allow_back=True)
+        if source is None or source == BACK:
+            return source
+
+        if source == "preset":
+            body = choose(
+                "Choose a preset",
+                tuple(module.body_options()),
+                allow_back=True,
+            )
+        elif source == "custom":
+            body = choose_custom_body(module)
+        else:
+            raise AssertionError(source)
+
+        if body == BACK:
+            continue
+        return body
 
 
 def confirm_design(
@@ -151,7 +238,7 @@ def option_by_slug(
 
 def design_ref(module, body: str, number_style: str, intensity: str):
     api = handoff_api()
-    body_label = option_by_slug(tuple(module.body_options()), body)[1]
+    body_label = module.body_label(body)
     number_label = option_by_slug(tuple(module.mark_options()), number_style)[1]
     intensity_label = option_by_slug(tuple(module.intensity_options()), intensity)[1]
     return api.DesignRef(
@@ -363,12 +450,11 @@ def create_prototype_batch(
 
 
 def run_single_interactive(module) -> str:
-    bodies = tuple(module.body_options())
     number_styles = tuple(module.mark_options())
     intensities = tuple(module.intensity_options())
 
     while True:
-        body = choose("Choose a shape", bodies, allow_back=True)
+        body = choose_single_body(module)
         if body is None:
             return "quit"
         if body == BACK:
@@ -396,7 +482,7 @@ def run_single_interactive(module) -> str:
                 if intensity == BACK:
                     break
 
-                body_label = option_by_slug(bodies, body)[1]
+                body_label = module.body_label(body)
                 number_label = option_by_slug(number_styles, number_style)[1]
                 intensity_label = option_by_slug(intensities, intensity)[1]
                 action = confirm_design(
@@ -536,14 +622,18 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Create tactile d6 designs, print handoffs, and prototype batches."
     )
-    parser.add_argument("--body", help="Shape id to use")
+    parser.add_argument("--body", help="Named preset or custom body slug to use")
+    parser.add_argument("--base", help="Build-your-own base-character id")
+    parser.add_argument("--edge", help="Build-your-own edge-treatment id")
+    parser.add_argument("--corner", help="Build-your-own corner-treatment id")
+    parser.add_argument("--face", help="Build-your-own face-treatment id")
     parser.add_argument("--numbers", help="Number-style id to use")
     parser.add_argument("--intensity", help="Tactile-intensity id to use")
     parser.add_argument("--list", action="store_true", help="Show available choices")
     parser.add_argument(
         "--all",
         action="store_true",
-        help="Export every shape/number-style/intensity combination",
+        help="Export every public body/number-style/intensity combination",
     )
     parser.add_argument(
         "--handoff",
@@ -562,12 +652,19 @@ def main(argv: list[str] | None = None) -> int:
     number_styles = tuple(module.mark_options())
     intensities = tuple(module.intensity_options())
     body_names = {slug for slug, _, _ in bodies}
+    base_names = {slug for slug, _, _ in module.base_options()}
+    edge_names = {slug for slug, _, _ in module.edge_options()}
+    corner_names = {slug for slug, _, _ in module.corner_options()}
+    face_names = {slug for slug, _, _ in module.face_options()}
     number_names = {slug for slug, _, _ in number_styles}
     intensity_names = {slug for slug, _, _ in intensities}
+    custom_args = (args.base, args.edge, args.corner, args.face)
+    uses_custom_body = any(value is not None for value in custom_args)
 
     if args.list:
         if (
             args.body
+            or uses_custom_body
             or args.numbers
             or args.intensity
             or args.all
@@ -575,17 +672,31 @@ def main(argv: list[str] | None = None) -> int:
             or args.batch
         ):
             parser.error(
-                "--list cannot be combined with --body, --numbers, --intensity, "
-                "--all, --handoff, or --batch"
+                "--list cannot be combined with body/custom-body arguments, "
+                "--numbers, --intensity, --all, --handoff, or --batch"
             )
         print_options(module)
         return 0
 
-    if args.body and args.body not in body_names:
+    if args.body and uses_custom_body:
+        parser.error("--body cannot be combined with --base/--edge/--corner/--face")
+    if args.body and not module.is_body_name(args.body):
         parser.error(
-            f"unknown shape {args.body!r}; choose from: "
-            f"{', '.join(slug for slug, _, _ in bodies)}"
+            f"unknown body {args.body!r}; choose a named preset or valid custom body"
         )
+    if args.batch and args.body and args.body not in body_names:
+        parser.error(
+            "prototype batches currently require a named preset body; "
+            "custom body batches are not yet supported"
+        )
+    if args.base and args.base not in base_names:
+        parser.error(f"unknown base character {args.base!r}")
+    if args.edge and args.edge not in edge_names:
+        parser.error(f"unknown edge treatment {args.edge!r}")
+    if args.corner and args.corner not in corner_names:
+        parser.error(f"unknown corner treatment {args.corner!r}")
+    if args.face and args.face not in face_names:
+        parser.error(f"unknown face treatment {args.face!r}")
     if args.numbers and args.numbers not in number_names:
         parser.error(
             f"unknown number style {args.numbers!r}; choose from: "
@@ -598,13 +709,26 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     if args.all:
-        if args.body or args.numbers or args.intensity or args.handoff or args.batch:
+        if (
+            args.body
+            or uses_custom_body
+            or args.numbers
+            or args.intensity
+            or args.handoff
+            or args.batch
+        ):
             parser.error(
-                "--all cannot be combined with --body, --numbers, --intensity, "
-                "--handoff, or --batch"
+                "--all cannot be combined with body/custom-body arguments, "
+                "--numbers, --intensity, --handoff, or --batch"
             )
         count = 0
-        for body, _, _ in bodies:
+        for spec in module.public_custom_body_specs():
+            body = module.make_custom_body_slug(
+                spec.base,
+                spec.edge,
+                spec.corner,
+                spec.face,
+            )
             for number_style, _, _ in number_styles:
                 for intensity, _, _ in intensities:
                     export_design(
@@ -626,6 +750,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if (
         not args.body
+        and not uses_custom_body
         and not args.numbers
         and not args.intensity
         and not args.handoff
@@ -634,11 +759,29 @@ def main(argv: list[str] | None = None) -> int:
         return run_interactive(module)
 
     interactive = sys.stdin.isatty()
-    if not args.body:
+    if uses_custom_body:
+        if args.batch:
+            parser.error(
+                "custom body prototype batches are not yet supported; "
+                "use a named preset baseline"
+            )
+        try:
+            body = module.make_custom_body_slug(
+                args.base or "balanced",
+                args.edge or "plain",
+                args.corner or "plain",
+                args.face or "plain",
+            )
+        except ValueError as exc:
+            parser.error(str(exc))
+    elif not args.body:
         if not interactive:
-            parser.error("--body is required in non-interactive mode")
-        body = choose("Choose a shape", bodies, allow_back=False)
+            parser.error("--body or build-your-own traits are required in non-interactive mode")
+        body = choose_single_body(module)
         if body is None:
+            print("No files created.")
+            return 0
+        if body == BACK:
             print("No files created.")
             return 0
     else:

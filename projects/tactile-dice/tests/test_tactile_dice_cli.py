@@ -23,8 +23,13 @@ def test_cli_lists_friendly_choices_and_script_ids() -> None:
 
     assert result.returncode == 0, result.stderr
     assert "Tactile Dice" in result.stdout
-    assert "Shapes:" in result.stdout
+    assert "Presets:" in result.stdout
     assert "Mochi" in result.stdout
+    assert "Build-your-own traits:" in result.stdout
+    assert "Base character:" in result.stdout
+    assert "Edge treatment:" in result.stdout
+    assert "Corner treatment:" in result.stdout
+    assert "Face treatment:" in result.stdout
     assert "[id: mochi-soft]" in result.stdout
     assert "Number styles:" in result.stdout
     assert "Paws" in result.stdout
@@ -47,13 +52,21 @@ def test_interactive_cli_can_quit_from_workflow_menu() -> None:
 
 
 def test_single_die_flow_can_back_out_to_workflow_menu() -> None:
-    result = run_cli(input_text="1\n1\n1\nb\nb\nb\nq\n")
+    result = run_cli(input_text="1\nb\nq\n")
 
     assert result.returncode == 0, result.stderr
-    assert result.stdout.count("\nChoose a shape:\n") == 2
-    assert "Choose the number style" in result.stdout
-    assert "Choose the tactile intensity" in result.stdout
+    assert "Choose how to start" in result.stdout
     assert result.stdout.count("\nWhat would you like to make?:\n") == 2
+    assert "No files created." in result.stdout
+
+
+def test_single_die_custom_flow_exposes_semantic_body_traits() -> None:
+    result = run_cli(input_text="1\n2\nq\n")
+
+    assert result.returncode == 0, result.stderr
+    assert "Choose how to start" in result.stdout
+    assert "Build your own" in result.stdout
+    assert "Choose a base character" in result.stdout
     assert "No files created." in result.stdout
 
 
@@ -71,6 +84,10 @@ def test_cli_help_uses_trait_language_and_output_modes() -> None:
     normalized_help = " ".join(result.stdout.split())
 
     assert result.returncode == 0
+    assert "--base" in result.stdout
+    assert "--edge" in result.stdout
+    assert "--corner" in result.stdout
+    assert "--face" in result.stdout
     assert "--numbers" in result.stdout
     assert "--marks" not in result.stdout
     assert "--intensity" in result.stdout
@@ -78,3 +95,15 @@ def test_cli_help_uses_trait_language_and_output_modes() -> None:
     assert "--batch {shape,numbers,intensity,surprise}" in result.stdout
     assert "one trait" in normalized_help
     assert "one axis" not in normalized_help
+
+
+def test_custom_body_batch_fails_with_a_clear_cli_error() -> None:
+    result = run_cli(
+        "--body", "custom--balanced--plain--plain--plain",
+        "--numbers", "paws",
+        "--batch", "intensity",
+    )
+
+    assert result.returncode == 2
+    assert "custom body batches are not yet supported" in result.stderr
+    assert "Traceback" not in result.stderr

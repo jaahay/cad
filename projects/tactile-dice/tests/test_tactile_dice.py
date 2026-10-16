@@ -2,6 +2,7 @@ from itertools import product
 
 import pytest
 
+from tactile_dice.common.body import BodySpec, PRESET_SPECS
 from tactile_dice.common.design import INTENSITY_SCALES
 from tactile_dice.common.parameters import FACE_VALUES, OPPOSITE_FACES, PIPS, SIZE
 from tactile_dice.manufacturing import (
@@ -10,12 +11,20 @@ from tactile_dice.manufacturing import (
     rotate_showcase_point,
 )
 from tactile_dice.project import (
+    base_options,
     blueprints,
+    body_label,
     body_options,
     build,
+    build_body,
     build_design,
+    corner_options,
+    edge_options,
+    face_options,
     intensity_options,
+    make_custom_body_slug,
     mark_options,
+    public_custom_body_specs,
     validate_project,
 )
 
@@ -49,6 +58,14 @@ def test_project_contract_and_standard_d6_definition() -> None:
     assert tuple(slug for slug, _, _ in body_options()) == EXPECTED_BLUEPRINTS
     assert tuple(slug for slug, _, _ in mark_options()) == EXPECTED_MARK_STYLES
     assert tuple(slug for slug, _, _ in intensity_options()) == EXPECTED_INTENSITIES
+    assert tuple(slug for slug, _, _ in base_options()) == (
+        "balanced",
+        "mochi",
+        "spherocube",
+        "faceted",
+    )
+    assert tuple(slug for slug, _, _ in edge_options()) == ("plain", "channels")
+    assert tuple(slug for slug, _, _ in face_options()) == ("plain", "nested")
     assert [label for _, label, _ in body_options()] == [
         "Mochi",
         "Spherocube",
@@ -72,6 +89,134 @@ def test_project_contract_and_standard_d6_definition() -> None:
     assert set(FACE_VALUES.values()) == set(range(1, 7))
     assert all(FACE_VALUES[a] + FACE_VALUES[b] == 7 for a, b in OPPOSITE_FACES)
     assert all(len(PIPS[value]) == value for value in range(1, 7))
+
+
+def test_existing_named_bodies_are_presets_on_the_composable_engine() -> None:
+    assert PRESET_SPECS == {
+        "mochi-soft": BodySpec(base="mochi"),
+        "spherocube": BodySpec(base="spherocube"),
+        "facet": BodySpec(base="faceted"),
+        "edge-channel": BodySpec(base="balanced", edge="channels"),
+        "corner-pocket": BodySpec(base="balanced", corner="pockets"),
+        "nested-steps": BodySpec(base="balanced", face="nested"),
+    }
+
+
+def test_corner_pockets_preset_is_the_balanced_composition() -> None:
+    preset = build_body("corner-pocket")
+    composed = build_body(make_custom_body_slug("balanced", corner="pockets"))
+
+    assert preset.isValid()
+    assert len(preset.Solids()) == 1
+    assert preset.Volume() == pytest.approx(composed.Volume(), rel=1e-10)
+
+
+def test_public_body_grammar_is_bounded_and_meaningful() -> None:
+    specs = public_custom_body_specs()
+    assert len(specs) == 20
+    assert all(spec.base in {"balanced", "mochi", "spherocube", "faceted"} for spec in specs)
+    assert all(
+        not (spec.corner == "pockets" and spec.base in {"mochi", "spherocube"})
+        for spec in specs
+    )
+    assert all(
+        not (spec.face == "nested" and spec.base in {"mochi", "spherocube"})
+        for spec in specs
+    )
+    assert tuple(slug for slug, _, _ in corner_options("mochi")) == ("plain",)
+    assert tuple(slug for slug, _, _ in corner_options("balanced")) == (
+        "plain",
+        "pockets",
+    )
+    assert tuple(slug for slug, _, _ in face_options("mochi")) == ("plain",)
+    assert tuple(slug for slug, _, _ in face_options("balanced")) == (
+        "plain",
+        "nested",
+    )
+
+
+@pytest.mark.parametrize("spec", public_custom_body_specs())
+def test_every_public_body_configuration_is_one_valid_nominal_solid(
+    spec: BodySpec,
+) -> None:
+    body_name = make_custom_body_slug(
+        spec.base,
+        spec.edge,
+        spec.corner,
+        spec.face,
+    )
+    body = build_body(body_name)
+    assert body.isValid()
+    assert len(body.Solids()) == 1
+    box = body.BoundingBox()
+    assert box.xlen == pytest.approx(SIZE, abs=0.01)
+    assert box.ylen == pytest.approx(SIZE, abs=0.01)
+    assert box.zlen == pytest.approx(SIZE, abs=0.01)
+    assert body_label(body_name)
+
+
+def test_custom_body_composes_with_existing_number_and_intensity_system() -> None:
+    body_name = make_custom_body_slug(
+        "faceted",
+        "channels",
+        "pockets",
+        "nested",
+    )
+    die = build_design(body_name, "paws", "bold")["die"]
+    assert die.isValid()
+    assert len(die.Solids()) == 1
+
+
+def test_complex_custom_die_accepts_the_breakaway_showcase_handoff() -> None:
+    body_name = make_custom_body_slug(
+        "faceted",
+        "channels",
+        "pockets",
+        "nested",
+    )
+    die = build_design(body_name, "paws", "bold")["die"]
+    showcase = build_showcase_print(die)
+
+    assert showcase.isValid()
+    assert len(showcase.Solids()) == 1
+    box = showcase.BoundingBox()
+    assert box.zmin == pytest.approx(0.0, abs=0.01)
+    assert box.zlen > SIZE
+
+
+@pytest.mark.parametrize(
+    ("spec", "mark_style", "intensity"),
+    tuple(
+        (spec, mark_style, intensity)
+        for spec, mark_style, intensity in product(
+            public_custom_body_specs(),
+            EXPECTED_MARK_STYLES,
+            EXPECTED_INTENSITIES,
+        )
+    ),
+)
+def test_every_build_your_own_design_is_one_valid_nominal_die(
+    spec: BodySpec,
+    mark_style: str,
+    intensity: str,
+) -> None:
+    body_name = make_custom_body_slug(
+        spec.base,
+        spec.edge,
+        spec.corner,
+        spec.face,
+    )
+    die = build_design(body_name, mark_style, intensity)["die"]
+
+    assert die.isValid()
+    assert len(die.Solids()) == 1
+    box = die.BoundingBox()
+    extents = (box.xlen, box.ylen, box.zlen)
+    assert max(extents) - min(extents) < 0.05
+    if mark_style == "pips":
+        assert all(length == pytest.approx(SIZE, abs=0.01) for length in extents)
+    else:
+        assert all(SIZE < length < SIZE + 2.1 for length in extents)
 
 
 @pytest.mark.parametrize("blueprint", EXPECTED_BLUEPRINTS)

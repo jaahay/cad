@@ -2,12 +2,12 @@
 
 import cadquery as cq
 
+from ..common.body import build_preset_body
 from ..common.die import finish_die
-from ..common.geometry import nested_steps_cube
 
 
 def body() -> cq.Shape:
-    return nested_steps_cube()
+    return build_preset_body("nested-steps")
 
 
 def build() -> dict[str, cq.Shape]:

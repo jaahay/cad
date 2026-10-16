@@ -2,12 +2,12 @@
 
 import cadquery as cq
 
+from ..common.body import build_preset_body
 from ..common.die import finish_die
-from ..common.geometry import corner_pocket_cube
 
 
 def body() -> cq.Shape:
-    return corner_pocket_cube()
+    return build_preset_body("corner-pocket")
 
 
 def build() -> dict[str, cq.Shape]:

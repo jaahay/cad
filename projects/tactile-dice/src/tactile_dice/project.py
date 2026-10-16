@@ -2,10 +2,22 @@
 
 from __future__ import annotations
 
-from importlib import import_module
-
 import cadquery as cq
 
+from .common.body import (
+    BASE_OPTIONS,
+    CORNER_OPTIONS,
+    EDGE_OPTIONS,
+    FACE_OPTIONS,
+    PRESET_SPECS,
+    BodySpec,
+    body_spec_label,
+    build_body_spec,
+    custom_body_slug,
+    parse_custom_body_slug,
+    public_body_specs,
+    resolve_body_spec,
+)
 from .common.design import DesignSpec, INTENSITY_SCALES, validate_intensity
 from .common.die import MARK_STYLES, finish_die, validate_definition
 
@@ -47,10 +59,45 @@ def blueprints() -> tuple[str, ...]:
 
 
 def body_options() -> tuple[tuple[str, str, str], ...]:
+    """Named presets retained as the quick-start catalog."""
     return tuple(
         (slug, label, description)
         for slug, (label, description) in BODY_OPTIONS.items()
     )
+
+
+def base_options() -> tuple[tuple[str, str, str], ...]:
+    return tuple(
+        (slug, label, description)
+        for slug, (label, description) in BASE_OPTIONS.items()
+    )
+
+
+def edge_options() -> tuple[tuple[str, str, str], ...]:
+    return tuple(
+        (slug, label, description)
+        for slug, (label, description) in EDGE_OPTIONS.items()
+    )
+
+
+def corner_options(base: str | None = None) -> tuple[tuple[str, str, str], ...]:
+    options = tuple(
+        (slug, label, description)
+        for slug, (label, description) in CORNER_OPTIONS.items()
+    )
+    if base in {"mochi", "spherocube"}:
+        return tuple(option for option in options if option[0] == "plain")
+    return options
+
+
+def face_options(base: str | None = None) -> tuple[tuple[str, str, str], ...]:
+    options = tuple(
+        (slug, label, description)
+        for slug, (label, description) in FACE_OPTIONS.items()
+    )
+    if base in {"mochi", "spherocube"}:
+        return tuple(option for option in options if option[0] == "plain")
+    return options
 
 
 def mark_options() -> tuple[tuple[str, str, str], ...]:
@@ -67,6 +114,33 @@ def intensity_options() -> tuple[tuple[str, str, str], ...]:
     )
 
 
+def public_custom_body_specs() -> tuple[BodySpec, ...]:
+    return public_body_specs()
+
+
+def make_custom_body_slug(
+    base: str,
+    edge: str = "plain",
+    corner: str = "plain",
+    face: str = "plain",
+) -> str:
+    return custom_body_slug(base, edge, corner, face)
+
+
+def is_body_name(body_name: str) -> bool:
+    try:
+        resolve_body_spec(body_name)
+    except ValueError:
+        return False
+    return True
+
+
+def body_label(body_name: str) -> str:
+    if body_name in BODY_OPTIONS:
+        return BODY_OPTIONS[body_name][0]
+    return body_spec_label(parse_custom_body_slug(body_name))
+
+
 def validate_project() -> None:
     validate_definition()
     if tuple(MARK_OPTIONS) != MARK_STYLES:
@@ -79,25 +153,18 @@ def validate_project() -> None:
         )
     if tuple(BODY_OPTIONS) != blueprints():
         raise ValueError("Tactile Dice shape metadata must match blueprints")
+    if tuple(BODY_OPTIONS) != tuple(PRESET_SPECS):
+        raise ValueError("Tactile Dice presets must match named body options")
 
 
 def build_body(body_name: str) -> cq.Shape:
     validate_project()
-    try:
-        module_name = BLUEPRINT_MODULES[body_name]
-    except KeyError as exc:
-        raise ValueError(f"Unknown tactile-dice body: {body_name}") from exc
-
-    module = import_module(module_name)
-    body_builder = getattr(module, "body", None)
-    if not callable(body_builder):
-        raise TypeError(f"{body_name}: body blueprint must expose body()")
-    return body_builder()
+    return build_body_spec(resolve_body_spec(body_name))
 
 
 def build_design_spec(spec: DesignSpec) -> dict[str, cq.Shape]:
     validate_project()
-    if spec.body not in BODY_OPTIONS:
+    if not is_body_name(spec.body):
         raise ValueError(f"Unknown tactile-dice body: {spec.body}")
     if spec.number_style not in MARK_OPTIONS:
         raise ValueError(f"Unknown tactile-dice mark style: {spec.number_style}")

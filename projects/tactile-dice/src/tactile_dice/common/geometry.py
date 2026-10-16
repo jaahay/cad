@@ -93,16 +93,18 @@ def ring_cutter(axis: str, pos: float, width: float, depth: float) -> cq.Shape:
     return outer.cut(inner)
 
 
-def edge_channel_cube() -> cq.Shape:
-    body = rounded_cube(3.0)
+def apply_edge_channels(body: cq.Shape) -> cq.Shape:
     for axis in ("X", "Y", "Z"):
         for pos in (-7.8, 7.8):
             body = body.cut(ring_cutter(axis, pos, width=1.35, depth=0.55))
     return body
 
 
-def corner_pocket_cube() -> cq.Shape:
-    body = rounded_cube(3.2)
+def edge_channel_cube() -> cq.Shape:
+    return apply_edge_channels(rounded_cube(3.0))
+
+
+def apply_corner_pockets(body: cq.Shape) -> cq.Shape:
     radius = 3.1
     center = HALF + 1.15
     for sx in (-1, 1):
@@ -115,6 +117,10 @@ def corner_pocket_cube() -> cq.Shape:
                 )
                 body = body.cut(sphere)
     return body
+
+
+def corner_pocket_cube() -> cq.Shape:
+    return apply_corner_pockets(rounded_cube(3.2))
 
 
 def face_panel_cutter(face: str, size: float, depth: float) -> cq.Shape:
@@ -133,12 +139,15 @@ def face_panel_cutter(face: str, size: float, depth: float) -> cq.Shape:
     raise ValueError(face)
 
 
-def nested_steps_cube() -> cq.Shape:
-    body = rounded_cube(3.0)
+def apply_nested_steps(body: cq.Shape) -> cq.Shape:
     for face in FACES:
         body = body.cut(face_panel_cutter(face, NESTED_OUTER_PANEL, NESTED_OUTER_DEPTH))
         body = body.cut(face_panel_cutter(face, NESTED_INNER_PANEL, NESTED_INNER_DEPTH))
     return body
+
+
+def nested_steps_cube() -> cq.Shape:
+    return apply_nested_steps(rounded_cube(3.0))
 
 
 def pip_sphere(
