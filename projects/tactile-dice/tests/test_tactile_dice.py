@@ -97,9 +97,18 @@ def test_existing_named_bodies_are_presets_on_the_composable_engine() -> None:
         "spherocube": BodySpec(base="spherocube"),
         "facet": BodySpec(base="faceted"),
         "edge-channel": BodySpec(base="balanced", edge="channels"),
-        "corner-pocket": BodySpec(base="_legacy-pocket", corner="pockets"),
+        "corner-pocket": BodySpec(base="balanced", corner="pockets"),
         "nested-steps": BodySpec(base="balanced", face="nested"),
     }
+
+
+def test_corner_pockets_preset_is_the_balanced_composition() -> None:
+    preset = build_body("corner-pocket")
+    composed = build_body(make_custom_body_slug("balanced", corner="pockets"))
+
+    assert preset.isValid()
+    assert len(preset.Solids()) == 1
+    assert preset.Volume() == pytest.approx(composed.Volume(), rel=1e-10)
 
 
 def test_public_body_grammar_is_bounded_and_meaningful() -> None:
@@ -156,6 +165,58 @@ def test_custom_body_composes_with_existing_number_and_intensity_system() -> Non
     die = build_design(body_name, "paws", "bold")["die"]
     assert die.isValid()
     assert len(die.Solids()) == 1
+
+
+def test_complex_custom_die_accepts_the_breakaway_showcase_handoff() -> None:
+    body_name = make_custom_body_slug(
+        "faceted",
+        "channels",
+        "pockets",
+        "nested",
+    )
+    die = build_design(body_name, "paws", "bold")["die"]
+    showcase = build_showcase_print(die)
+
+    assert showcase.isValid()
+    assert len(showcase.Solids()) == 1
+    box = showcase.BoundingBox()
+    assert box.zmin == pytest.approx(0.0, abs=0.01)
+    assert box.zlen > SIZE
+
+
+@pytest.mark.parametrize(
+    ("spec", "mark_style", "intensity"),
+    tuple(
+        (spec, mark_style, intensity)
+        for spec, mark_style, intensity in product(
+            public_custom_body_specs(),
+            EXPECTED_MARK_STYLES,
+            EXPECTED_INTENSITIES,
+        )
+    ),
+)
+def test_every_build_your_own_design_is_one_valid_nominal_die(
+    spec: BodySpec,
+    mark_style: str,
+    intensity: str,
+) -> None:
+    body_name = make_custom_body_slug(
+        spec.base,
+        spec.edge,
+        spec.corner,
+        spec.face,
+    )
+    die = build_design(body_name, mark_style, intensity)["die"]
+
+    assert die.isValid()
+    assert len(die.Solids()) == 1
+    box = die.BoundingBox()
+    extents = (box.xlen, box.ylen, box.zlen)
+    assert max(extents) - min(extents) < 0.05
+    if mark_style == "pips":
+        assert all(length == pytest.approx(SIZE, abs=0.01) for length in extents)
+    else:
+        assert all(SIZE < length < SIZE + 2.1 for length in extents)
 
 
 @pytest.mark.parametrize("blueprint", EXPECTED_BLUEPRINTS)

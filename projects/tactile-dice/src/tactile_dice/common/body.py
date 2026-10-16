@@ -48,10 +48,6 @@ _BASE_BUILDERS = {
     "mochi": ("rounded", 3.8),
     "spherocube": ("rounded", 5.8),
     "faceted": ("chamfered", 2.4),
-    # The original Corner Pockets body used a slightly different rounding
-    # radius. Keep that exact legacy geometry as a preset without exposing the
-    # raw value as a user-facing choice.
-    "_legacy-pocket": ("rounded", 3.2),
 }
 
 
@@ -82,7 +78,7 @@ PRESET_SPECS = {
     "spherocube": BodySpec(base="spherocube"),
     "facet": BodySpec(base="faceted"),
     "edge-channel": BodySpec(base="balanced", edge="channels"),
-    "corner-pocket": BodySpec(base="_legacy-pocket", corner="pockets"),
+    "corner-pocket": BodySpec(base="balanced", corner="pockets"),
     "nested-steps": BodySpec(base="balanced", face="nested"),
 }
 
@@ -197,11 +193,7 @@ def build_preset_body(preset: str) -> cq.Shape:
 
 def body_spec_label(spec: BodySpec) -> str:
     validate_body_spec(spec)
-    base_label = (
-        BASE_OPTIONS[spec.base][0]
-        if spec.base in BASE_OPTIONS
-        else "Balanced"
-    )
+    base_label = BASE_OPTIONS[spec.base][0]
     labels = [base_label]
     if spec.edge != "plain":
         labels.append(EDGE_OPTIONS[spec.edge][0])

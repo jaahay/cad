@@ -633,7 +633,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--all",
         action="store_true",
-        help="Export every shape/number-style/intensity combination",
+        help="Export every public body/number-style/intensity combination",
     )
     parser.add_argument(
         "--handoff",
@@ -683,6 +683,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.body and not module.is_body_name(args.body):
         parser.error(
             f"unknown body {args.body!r}; choose a named preset or valid custom body"
+        )
+    if args.batch and args.body and args.body not in body_names:
+        parser.error(
+            "prototype batches currently require a named preset body; "
+            "custom body batches are not yet supported"
         )
     if args.base and args.base not in base_names:
         parser.error(f"unknown base character {args.base!r}")

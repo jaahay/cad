@@ -126,6 +126,8 @@ The six original bodies remain available as **presets**:
 - **Corner Pockets** — scooped corners
 - **Nested Steps** — layered tactile faces
 
+Each preset uses the same composable body engine. In particular, **Corner Pockets** is the Balanced base with the Pockets treatment.
+
 Build-your-own bodies use the bounded Base + Edge + Corner + Face grammar above. Raw radii, groove depths, pocket dimensions, and panel depths are deliberately not user-facing controls.
 
 Number styles:

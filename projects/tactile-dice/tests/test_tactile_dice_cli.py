@@ -95,3 +95,15 @@ def test_cli_help_uses_trait_language_and_output_modes() -> None:
     assert "--batch {shape,numbers,intensity,surprise}" in result.stdout
     assert "one trait" in normalized_help
     assert "one axis" not in normalized_help
+
+
+def test_custom_body_batch_fails_with_a_clear_cli_error() -> None:
+    result = run_cli(
+        "--body", "custom--balanced--plain--plain--plain",
+        "--numbers", "paws",
+        "--batch", "intensity",
+    )
+
+    assert result.returncode == 2
+    assert "custom body batches are not yet supported" in result.stderr
+    assert "Traceback" not in result.stderr
